@@ -357,6 +357,12 @@ class Game:
         # 更新炮制结果UI
         self.craft_result_ui.update(self.dt)
 
+        # 更新任务通知
+        self.quest_notification.update(self.dt)
+
+        # 更新对话框
+        self.dialogue_box.update(self.dt)
+
         # 检查玩家是否死亡
         if not self.player.is_alive():
             self._handle_player_death()
