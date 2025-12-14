@@ -8,32 +8,32 @@ import pygame
 import os
 
 
-# 途径名称到英文文件名的映射
+# 途径名称到英文文件名的映射（基于img/charactor目录下的实际文件）
+# 22条途径对应22个图片文件
 PATHWAY_FILE_NAMES = {
-    # 原有11条途径
-    "占卜家": "Seer",
-    "隐者": "Marauder",
-    "观众": "spectator",
-    "读者": "Reader",
-    "黑夜": "Darkness",
-    "死神": "Death",
-    "红祭司": "RedPriest",
-    "水手": "Sailor",
-    "巨人": "Giant",
-    "吟游诗人": "Bard",
-    "学徒": "Apprentice",
-    # 新增途径
-    "深渊": "ABYSS",
-    "黑皇帝": "BLACK EMPEROR",
-    "囚徒": "CHAINED",
-    "隐士": "Hermit",
-    "审判官": "JUSTICIAR",
-    "月亮": "MOON",
-    "母亲": "MOTHER",
-    "完美者": "PERFECTIONIST",
-    "命运之轮": "THE WHEEL OF FORTUNE",
-    "女巫": "Witch",
-    "秘祈人": "SECRETS SUPPLICANT",
+    # 根据实际图片文件名映射
+    "愚者": "Seer",                    # 占卜家途径
+    "门": "Marauder",                  # 偷盗者途径
+    "隐秘": "spectator",               # 读心者途径
+    "智慧": "Reader",                  # 鉴定师途径
+    "黑夜": "Darkness",                # 祈密师途径
+    "死亡": "Death",                   # 尸巫途径
+    "猎人": "RedPriest",               # 猎人途径
+    "暴风": "Sailor",                  # 水手途径
+    "战争": "Giant",                   # 战士途径
+    "命运": "Bard",                    # 幸运儿途径
+    "炼药": "Apprentice",              # 炼药师途径
+    "错误": "ABYSS",                   # 罪犯途径
+    "黑皇帝": "BLACK EMPEROR",         # 强权者途径
+    "囚徒": "CHAINED",                 # 囚徒途径（自定义）
+    "刺客": "Hermit",                  # 刺客途径
+    "审判": "JUSTICIAR",               # 仲裁者途径
+    "太阳": "MOON",                    # 拜祭师途径（月亮图暂代太阳）
+    "驭兽": "MOTHER",                  # 驭兽师途径
+    "完美者": "PERFECTIONIST",         # 完美者途径（自定义）
+    "秘祈人": "SECRETS SUPPLICANT",    # 秘祈人途径（自定义）
+    "命运之轮": "THE WHEEL OF FORTUNE", # 命运之轮途径（自定义）
+    "女巫": "Witch",                   # 女巫途径（自定义）
 }
 
 # 预缩放的常用尺寸
@@ -51,7 +51,7 @@ class SpriteManager:
     def __init__(self):
         self.base_path = None
         self.all_sequence_sprites = {}  # {pathway_name: {sequence: {size_name: sprite}}}
-        self.current_pathway = "占卜家"
+        self.current_pathway = "愚者"
         self.loading_progress = 0
         self.loading_total = 0
         self.loading_current = ""
@@ -65,17 +65,23 @@ class SpriteManager:
         """绘制加载进度界面"""
         screen.fill((20, 20, 30))
 
-        # 标题
-        font_large = pygame.font.Font(None, 48)
-        font_small = pygame.font.Font(None, 24)
+        # 使用系统中文字体
+        try:
+            font_path = "/System/Library/Fonts/PingFang.ttc"
+            font_large = pygame.font.Font(font_path, 36)
+            font_small = pygame.font.Font(font_path, 20)
+        except:
+            font_large = pygame.font.Font(None, 48)
+            font_small = pygame.font.Font(None, 24)
 
-        title = font_large.render("Loading...", True, (218, 165, 32))
+        # 标题
+        title = font_large.render("正在加载...", True, (218, 165, 32))
         title_rect = title.get_rect(center=(screen.get_width() // 2, screen.get_height() // 2 - 60))
         screen.blit(title, title_rect)
 
         # 当前加载项
         if current_name:
-            current = font_small.render(f"Loading: {current_name}", True, (150, 150, 150))
+            current = font_small.render(f"加载途径: {current_name}", True, (150, 150, 150))
             current_rect = current.get_rect(center=(screen.get_width() // 2, screen.get_height() // 2 - 20))
             screen.blit(current, current_rect)
 
@@ -137,7 +143,7 @@ class SpriteManager:
             pygame.event.pump()
 
         # 完成
-        self._draw_loading_screen(screen, total, total, "Complete!")
+        self._draw_loading_screen(screen, total, total, "加载完成!")
         pygame.time.wait(300)
 
     def _split_and_prescale(self, pathway_name, sprite_sheet):

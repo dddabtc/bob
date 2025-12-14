@@ -85,6 +85,13 @@ class PathwaySelectUI:
         }
         self.current_filter = "all"
 
+        # 翻页按钮区域
+        self.prev_page_rect = pygame.Rect(80, 330, 100, 30)
+        self.next_page_rect = pygame.Rect(SCREEN_WIDTH - 180, 330, 100, 30)
+
+        # 筛选按钮区域
+        self.filter_rects = {}
+
         self._create_cards()
 
     def _get_filtered_pathways(self):
@@ -133,6 +140,22 @@ class PathwaySelectUI:
                     c.is_selected = False
                 card.is_selected = True
                 self.selected_pathway = card.pathway_id
+
+        # 处理鼠标点击翻页
+        if mouse_clicked:
+            # 上一页按钮
+            if self.current_page > 0 and self.prev_page_rect.collidepoint(mouse_pos):
+                self.current_page -= 1
+                self._create_cards()
+            # 下一页按钮
+            elif self.current_page < self.max_pages - 1 and self.next_page_rect.collidepoint(mouse_pos):
+                self.current_page += 1
+                self._create_cards()
+            # 筛选按钮
+            for filter_id, rect in self.filter_rects.items():
+                if rect.collidepoint(mouse_pos):
+                    self._set_filter(filter_id)
+                    break
 
         # 处理键盘事件
         for event in events:
@@ -214,14 +237,25 @@ class PathwaySelectUI:
         btn_width = 100
         gap = 10
 
+        mouse_pos = pygame.mouse.get_pos()
+
         for i, (filter_id, filter_name) in enumerate(filters):
             x = start_x + i * (btn_width + gap)
             rect = pygame.Rect(x, y, btn_width, 30)
+
+            # 保存rect用于点击检测
+            self.filter_rects[filter_id] = rect
+
+            # 检测悬停
+            is_hovered = rect.collidepoint(mouse_pos)
 
             # 颜色
             if filter_id == self.current_filter:
                 bg_color = GOLD
                 text_color = BLACK
+            elif is_hovered:
+                bg_color = (100, 90, 120)
+                text_color = WHITE
             else:
                 bg_color = DARK_GRAY
                 text_color = WHITE
@@ -324,6 +358,8 @@ class PathwaySelectUI:
         filtered = self._get_filtered_pathways()
         total = len(filtered)
 
+        mouse_pos = pygame.mouse.get_pos()
+
         page_text = self.fonts["small"].render(
             f"第 {self.current_page + 1}/{self.max_pages} 页 (共 {total} 条途径)",
             True, GRAY
@@ -331,19 +367,32 @@ class PathwaySelectUI:
         page_rect = page_text.get_rect(center=(SCREEN_WIDTH // 2, 345))
         self.screen.blit(page_text, page_rect)
 
-        # 左右箭头提示
+        # 上一页按钮
         if self.current_page > 0:
-            left_hint = self.fonts["tiny"].render("← 上一页", True, GRAY)
-            self.screen.blit(left_hint, (100, 340))
+            is_hovered = self.prev_page_rect.collidepoint(mouse_pos)
+            bg_color = (80, 70, 100) if is_hovered else (50, 45, 70)
+            text_color = GOLD if is_hovered else GRAY
+            pygame.draw.rect(self.screen, bg_color, self.prev_page_rect, border_radius=5)
+            pygame.draw.rect(self.screen, (100, 100, 120), self.prev_page_rect, 1, border_radius=5)
+            left_hint = self.fonts["tiny"].render("← 上一页", True, text_color)
+            left_rect = left_hint.get_rect(center=self.prev_page_rect.center)
+            self.screen.blit(left_hint, left_rect)
 
+        # 下一页按钮
         if self.current_page < self.max_pages - 1:
-            right_hint = self.fonts["tiny"].render("下一页 →", True, GRAY)
-            self.screen.blit(right_hint, (SCREEN_WIDTH - 180, 340))
+            is_hovered = self.next_page_rect.collidepoint(mouse_pos)
+            bg_color = (80, 70, 100) if is_hovered else (50, 45, 70)
+            text_color = GOLD if is_hovered else GRAY
+            pygame.draw.rect(self.screen, bg_color, self.next_page_rect, border_radius=5)
+            pygame.draw.rect(self.screen, (100, 100, 120), self.next_page_rect, 1, border_radius=5)
+            right_hint = self.fonts["tiny"].render("下一页 →", True, text_color)
+            right_rect = right_hint.get_rect(center=self.next_page_rect.center)
+            self.screen.blit(right_hint, right_rect)
 
     def _draw_hints(self):
         """绘制操作提示"""
         hints = [
-            "← → 翻页  |  1-7 筛选类型  |  点击选择途径  |  ENTER/SPACE 确认  |  ESC 返回"
+            "鼠标点击翻页/筛选/选择途径  |  ← → 翻页  |  ENTER 确认  |  ESC 返回"
         ]
 
         y = SCREEN_HEIGHT - 40
