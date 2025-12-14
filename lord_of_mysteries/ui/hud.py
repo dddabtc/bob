@@ -141,10 +141,11 @@ class GameHUD:
             "K - 闪避",
             "1-4 - 技能",
             "I - 背包/炮制",
+            "Q - 任务",
             "ESC - 暂停"
         ]
 
-        y = SCREEN_HEIGHT - 150
+        y = SCREEN_HEIGHT - 175
         for text in controls:
             hint = self.fonts["tiny"].render(text, True, GRAY)
             self.screen.blit(hint, (20, y))

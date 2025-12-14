@@ -419,6 +419,12 @@ class Game:
         self.current_wave += 1
         self.wave_complete = False
 
+        # 通知任务系统
+        updates = self.quest_system.on_wave_reached(self.current_wave)
+        for quest_id, obj_desc, current, required in updates:
+            if current >= required:
+                self.quest_notification.add(f"目标完成: {obj_desc}", (100, 255, 100), 2.0)
+
         wave_config = get_wave_enemies(self.current_wave)
 
         self.floating_texts.append(FloatingText(
@@ -552,6 +558,12 @@ class Game:
         self.kill_count += 1
         self.total_exp += enemy.exp
 
+        # 通知任务系统
+        updates = self.quest_system.on_enemy_killed(enemy.name)
+        for quest_id, obj_desc, current, required in updates:
+            if current >= required:
+                self.quest_notification.add(f"目标完成: {obj_desc}", (100, 255, 100), 2.0)
+
         # 显示经验
         self.floating_texts.append(FloatingText(
             enemy.x, enemy.y,
@@ -611,6 +623,12 @@ class Game:
                 # 右上角通知
                 self.drop_notification.add(f"获得 {item_name} x{item_count}", color)
 
+                # 通知任务系统收集
+                updates = self.quest_system.on_item_collected(item_name, item_count)
+                for quest_id, obj_desc, current, required in updates:
+                    if current >= required:
+                        self.quest_notification.add(f"目标完成: {obj_desc}", (100, 255, 100), 2.0)
+
                 self.drops.remove(drop)
 
     def _handle_player_death(self):
@@ -630,11 +648,20 @@ class Game:
 
         elif self.state == GameState.PLAYING:
             self._draw_playing()
+            # 绘制任务追踪
+            self.quest_tracker.draw(self.quest_system)
+            # 绘制任务通知
+            self.quest_notification.draw(self.screen, self.fonts)
             # 绘制背包UI（如果打开）
             if self.inventory_ui.is_open:
                 self.inventory_ui.draw(self.inventory, self.player, self.potion_system)
+            # 绘制任务UI（如果打开）
+            if self.quest_ui.is_open:
+                self.quest_ui.draw(self.quest_system, self.player)
             # 绘制炮制结果
             self.craft_result_ui.draw()
+            # 绘制对话框
+            self.dialogue_box.draw()
 
         elif self.state == GameState.PAUSED:
             self._draw_playing()
