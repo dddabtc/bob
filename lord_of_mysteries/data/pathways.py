@@ -274,6 +274,196 @@ PATHWAYS = {
             0: {"name": "知识之神", "skills": ["火球术", "冰锥术", "魔法护盾"], "hp": 2850, "attack": 845, "defense": 185, "speed": 24},
         }
     },
+    "深渊": {
+        "name": "深渊途径",
+        "god": "真实造物主",
+        "type": "magic",
+        "color": (20, 20, 60),  # 深蓝黑
+        "desc": "深渊与毁灭之道，掌控黑暗力量",
+        "sequences": {
+            9: {"name": "深渊追随者", "skills": ["深渊凝视", "黑暗侵蚀"], "hp": 100, "attack": 20, "defense": 4, "speed": 4},
+            8: {"name": "深渊信徒", "skills": ["深渊凝视", "黑暗侵蚀"], "hp": 155, "attack": 32, "defense": 7, "speed": 5},
+            7: {"name": "深渊行者", "skills": ["深渊凝视", "黑暗侵蚀"], "hp": 210, "attack": 48, "defense": 11, "speed": 6},
+            6: {"name": "深渊使者", "skills": ["深渊凝视", "黑暗侵蚀"], "hp": 290, "attack": 70, "defense": 16, "speed": 7},
+            5: {"name": "深渊主宰", "skills": ["深渊凝视", "黑暗侵蚀"], "hp": 400, "attack": 98, "defense": 24, "speed": 8},
+            4: {"name": "虚空行者", "skills": ["深渊凝视", "黑暗侵蚀"], "hp": 530, "attack": 138, "defense": 34, "speed": 9},
+            3: {"name": "毁灭者", "skills": ["深渊凝视", "黑暗侵蚀"], "hp": 740, "attack": 205, "defense": 50, "speed": 11},
+            2: {"name": "末日使者", "skills": ["深渊凝视", "黑暗侵蚀"], "hp": 1060, "attack": 320, "defense": 78, "speed": 14},
+            1: {"name": "深渊之王", "skills": ["深渊凝视", "黑暗侵蚀"], "hp": 1560, "attack": 510, "defense": 118, "speed": 17},
+            0: {"name": "真实造物主", "skills": ["深渊凝视", "黑暗侵蚀"], "hp": 3200, "attack": 900, "defense": 200, "speed": 24},
+        }
+    },
+    "黑皇帝": {
+        "name": "黑皇帝途径",
+        "god": "黑皇帝",
+        "type": "control",
+        "color": (30, 30, 30),  # 纯黑
+        "desc": "权谋与统治之道，以黑暗手段掌控一切",
+        "sequences": {
+            9: {"name": "律师", "skills": ["威压", "契约"], "hp": 105, "attack": 14, "defense": 6, "speed": 5},
+            8: {"name": "野心家", "skills": ["威压", "契约"], "hp": 160, "attack": 24, "defense": 9, "speed": 6},
+            7: {"name": "谋士", "skills": ["威压", "契约"], "hp": 215, "attack": 38, "defense": 14, "speed": 7},
+            6: {"name": "幕后黑手", "skills": ["威压", "契约"], "hp": 295, "attack": 58, "defense": 20, "speed": 8},
+            5: {"name": "野心执政官", "skills": ["威压", "契约"], "hp": 405, "attack": 84, "defense": 28, "speed": 9},
+            4: {"name": "独裁者", "skills": ["威压", "契约"], "hp": 535, "attack": 118, "defense": 38, "speed": 10},
+            3: {"name": "魔鬼", "skills": ["威压", "契约"], "hp": 745, "attack": 176, "defense": 55, "speed": 12},
+            2: {"name": "契约之王", "skills": ["威压", "契约"], "hp": 1060, "attack": 276, "defense": 85, "speed": 15},
+            1: {"name": "暗帝", "skills": ["威压", "契约"], "hp": 1560, "attack": 442, "defense": 125, "speed": 18},
+            0: {"name": "黑皇帝", "skills": ["威压", "契约"], "hp": 3150, "attack": 785, "defense": 210, "speed": 25},
+        }
+    },
+    "囚徒": {
+        "name": "囚徒途径",
+        "god": "被囚禁者",
+        "type": "melee",
+        "color": (100, 80, 60),  # 锈棕色
+        "desc": "束缚与挣脱之道，在枷锁中获得力量",
+        "sequences": {
+            9: {"name": "囚徒", "skills": ["挣脱", "锁链攻击"], "hp": 120, "attack": 16, "defense": 8, "speed": 4},
+            8: {"name": "逃脱者", "skills": ["挣脱", "锁链攻击"], "hp": 180, "attack": 26, "defense": 12, "speed": 5},
+            7: {"name": "自由行者", "skills": ["挣脱", "锁链攻击"], "hp": 240, "attack": 40, "defense": 18, "speed": 6},
+            6: {"name": "束缚者", "skills": ["挣脱", "锁链攻击"], "hp": 330, "attack": 60, "defense": 26, "speed": 7},
+            5: {"name": "锁链大师", "skills": ["挣脱", "锁链攻击"], "hp": 450, "attack": 86, "defense": 36, "speed": 8},
+            4: {"name": "监狱长", "skills": ["挣脱", "锁链攻击"], "hp": 600, "attack": 120, "defense": 48, "speed": 9},
+            3: {"name": "枷锁之王", "skills": ["挣脱", "锁链攻击"], "hp": 840, "attack": 178, "defense": 68, "speed": 10},
+            2: {"name": "自由化身", "skills": ["挣脱", "锁链攻击"], "hp": 1200, "attack": 278, "defense": 100, "speed": 12},
+            1: {"name": "解放者", "skills": ["挣脱", "锁链攻击"], "hp": 1780, "attack": 445, "defense": 145, "speed": 15},
+            0: {"name": "被囚禁者", "skills": ["挣脱", "锁链攻击"], "hp": 3500, "attack": 790, "defense": 240, "speed": 22},
+        }
+    },
+    "隐士": {
+        "name": "隐士途径",
+        "god": "隐士",
+        "type": "wisdom",
+        "color": (139, 119, 101),  # 灰褐色
+        "desc": "隐居与洞察之道，在孤独中寻找真理",
+        "sequences": {
+            9: {"name": "隐士", "skills": ["洞察", "冥想"], "hp": 95, "attack": 14, "defense": 5, "speed": 4},
+            8: {"name": "苦行者", "skills": ["洞察", "冥想"], "hp": 145, "attack": 24, "defense": 8, "speed": 5},
+            7: {"name": "修行者", "skills": ["洞察", "冥想"], "hp": 195, "attack": 38, "defense": 12, "speed": 6},
+            6: {"name": "悟道者", "skills": ["洞察", "冥想"], "hp": 270, "attack": 58, "defense": 18, "speed": 7},
+            5: {"name": "真人", "skills": ["洞察", "冥想"], "hp": 370, "attack": 84, "defense": 25, "speed": 8},
+            4: {"name": "圣人", "skills": ["洞察", "冥想"], "hp": 490, "attack": 118, "defense": 35, "speed": 9},
+            3: {"name": "天人", "skills": ["洞察", "冥想"], "hp": 690, "attack": 176, "defense": 50, "speed": 11},
+            2: {"name": "超脱者", "skills": ["洞察", "冥想"], "hp": 990, "attack": 276, "defense": 78, "speed": 14},
+            1: {"name": "至高隐士", "skills": ["洞察", "冥想"], "hp": 1470, "attack": 442, "defense": 118, "speed": 17},
+            0: {"name": "隐士", "skills": ["洞察", "冥想"], "hp": 2900, "attack": 785, "defense": 195, "speed": 24},
+        }
+    },
+    "审判官": {
+        "name": "审判官途径",
+        "god": "审判之神",
+        "type": "melee",
+        "color": (192, 192, 192),  # 银色
+        "desc": "审判与正义之道，以神圣之力惩戒邪恶",
+        "sequences": {
+            9: {"name": "审判官", "skills": ["神圣审判", "正义之锤"], "hp": 115, "attack": 16, "defense": 8, "speed": 4},
+            8: {"name": "裁决者", "skills": ["神圣审判", "正义之锤"], "hp": 175, "attack": 26, "defense": 12, "speed": 5},
+            7: {"name": "执法者", "skills": ["神圣审判", "正义之锤"], "hp": 235, "attack": 40, "defense": 18, "speed": 6},
+            6: {"name": "圣裁骑士", "skills": ["神圣审判", "正义之锤"], "hp": 320, "attack": 60, "defense": 26, "speed": 7},
+            5: {"name": "审判长", "skills": ["神圣审判", "正义之锤"], "hp": 435, "attack": 86, "defense": 36, "speed": 8},
+            4: {"name": "正义执行者", "skills": ["神圣审判", "正义之锤"], "hp": 575, "attack": 120, "defense": 48, "speed": 9},
+            3: {"name": "天罚使者", "skills": ["神圣审判", "正义之锤"], "hp": 800, "attack": 180, "defense": 68, "speed": 10},
+            2: {"name": "审判天使", "skills": ["神圣审判", "正义之锤"], "hp": 1150, "attack": 280, "defense": 100, "speed": 12},
+            1: {"name": "至高审判者", "skills": ["神圣审判", "正义之锤"], "hp": 1700, "attack": 450, "defense": 145, "speed": 15},
+            0: {"name": "审判之神", "skills": ["神圣审判", "正义之锤"], "hp": 3400, "attack": 800, "defense": 240, "speed": 22},
+        }
+    },
+    "月亮": {
+        "name": "月亮途径",
+        "god": "月之女神",
+        "type": "magic",
+        "color": (200, 200, 230),  # 月白色
+        "desc": "月光与变化之道，借月之力量转化形态",
+        "sequences": {
+            9: {"name": "月亮侍者", "skills": ["月光祝福", "月影步"], "hp": 95, "attack": 16, "defense": 5, "speed": 6},
+            8: {"name": "银月骑士", "skills": ["月光祝福", "月影步"], "hp": 145, "attack": 26, "defense": 8, "speed": 7},
+            7: {"name": "月影", "skills": ["月光祝福", "月影步"], "hp": 195, "attack": 40, "defense": 12, "speed": 8},
+            6: {"name": "月之猎手", "skills": ["月光祝福", "月影步"], "hp": 270, "attack": 60, "defense": 18, "speed": 9},
+            5: {"name": "银月使者", "skills": ["月光祝福", "月影步"], "hp": 370, "attack": 86, "defense": 25, "speed": 10},
+            4: {"name": "月之牧师", "skills": ["月光祝福", "月影步"], "hp": 490, "attack": 122, "defense": 35, "speed": 12},
+            3: {"name": "月之骑士", "skills": ["月光祝福", "月影步"], "hp": 690, "attack": 182, "defense": 50, "speed": 14},
+            2: {"name": "银月圣女", "skills": ["月光祝福", "月影步"], "hp": 990, "attack": 285, "defense": 78, "speed": 17},
+            1: {"name": "月之化身", "skills": ["月光祝福", "月影步"], "hp": 1470, "attack": 455, "defense": 118, "speed": 21},
+            0: {"name": "月之女神", "skills": ["月光祝福", "月影步"], "hp": 2900, "attack": 810, "defense": 195, "speed": 28},
+        }
+    },
+    "母亲": {
+        "name": "母亲途径",
+        "god": "大地之母",
+        "type": "support",
+        "color": (139, 90, 43),  # 大地棕
+        "desc": "生命与大地之道，孕育万物的力量",
+        "sequences": {
+            9: {"name": "大地之子", "skills": ["大地祝福", "生命治愈"], "hp": 120, "attack": 12, "defense": 8, "speed": 4},
+            8: {"name": "农夫", "skills": ["大地祝福", "生命治愈"], "hp": 180, "attack": 20, "defense": 12, "speed": 5},
+            7: {"name": "德鲁伊", "skills": ["大地祝福", "生命治愈"], "hp": 240, "attack": 32, "defense": 18, "speed": 6},
+            6: {"name": "自然守卫", "skills": ["大地祝福", "生命治愈"], "hp": 330, "attack": 48, "defense": 26, "speed": 7},
+            5: {"name": "生命导师", "skills": ["大地祝福", "生命治愈"], "hp": 450, "attack": 70, "defense": 36, "speed": 8},
+            4: {"name": "大地之心", "skills": ["大地祝福", "生命治愈"], "hp": 600, "attack": 100, "defense": 48, "speed": 9},
+            3: {"name": "万物之母", "skills": ["大地祝福", "生命治愈"], "hp": 840, "attack": 150, "defense": 68, "speed": 10},
+            2: {"name": "生命源泉", "skills": ["大地祝福", "生命治愈"], "hp": 1200, "attack": 235, "defense": 100, "speed": 12},
+            1: {"name": "大地化身", "skills": ["大地祝福", "生命治愈"], "hp": 1780, "attack": 375, "defense": 145, "speed": 15},
+            0: {"name": "大地之母", "skills": ["大地祝福", "生命治愈"], "hp": 3600, "attack": 670, "defense": 250, "speed": 22},
+        }
+    },
+    "完美者": {
+        "name": "完美者途径",
+        "god": "完美之神",
+        "type": "special",
+        "color": (255, 215, 0),  # 金色
+        "desc": "完美与极致之道，追求绝对的完美",
+        "sequences": {
+            9: {"name": "完美主义者", "skills": ["精确打击", "完美防御"], "hp": 100, "attack": 16, "defense": 6, "speed": 5},
+            8: {"name": "艺术家", "skills": ["精确打击", "完美防御"], "hp": 155, "attack": 26, "defense": 9, "speed": 6},
+            7: {"name": "大师", "skills": ["精确打击", "完美防御"], "hp": 210, "attack": 40, "defense": 14, "speed": 7},
+            6: {"name": "宗师", "skills": ["精确打击", "完美防御"], "hp": 290, "attack": 60, "defense": 20, "speed": 8},
+            5: {"name": "完美战士", "skills": ["精确打击", "完美防御"], "hp": 400, "attack": 86, "defense": 28, "speed": 9},
+            4: {"name": "无瑕者", "skills": ["精确打击", "完美防御"], "hp": 530, "attack": 122, "defense": 38, "speed": 10},
+            3: {"name": "完美化身", "skills": ["精确打击", "完美防御"], "hp": 740, "attack": 182, "defense": 55, "speed": 12},
+            2: {"name": "至臻者", "skills": ["精确打击", "完美防御"], "hp": 1060, "attack": 285, "defense": 85, "speed": 15},
+            1: {"name": "完美使者", "skills": ["精确打击", "完美防御"], "hp": 1560, "attack": 455, "defense": 125, "speed": 18},
+            0: {"name": "完美之神", "skills": ["精确打击", "完美防御"], "hp": 3150, "attack": 810, "defense": 210, "speed": 25},
+        }
+    },
+    "命运之轮": {
+        "name": "命运之轮途径",
+        "god": "命运女神",
+        "type": "control",
+        "color": (148, 0, 211),  # 紫罗兰
+        "desc": "命运与因果之道，操控命运的齿轮",
+        "sequences": {
+            9: {"name": "幸运儿", "skills": ["命运转轮", "因果操控"], "hp": 95, "attack": 15, "defense": 5, "speed": 5},
+            8: {"name": "赌徒", "skills": ["命运转轮", "因果操控"], "hp": 145, "attack": 25, "defense": 8, "speed": 6},
+            7: {"name": "命运触手", "skills": ["命运转轮", "因果操控"], "hp": 195, "attack": 39, "defense": 12, "speed": 7},
+            6: {"name": "因果编织者", "skills": ["命运转轮", "因果操控"], "hp": 270, "attack": 59, "defense": 18, "speed": 8},
+            5: {"name": "命运操手", "skills": ["命运转轮", "因果操控"], "hp": 370, "attack": 85, "defense": 25, "speed": 9},
+            4: {"name": "时运大师", "skills": ["命运转轮", "因果操控"], "hp": 490, "attack": 120, "defense": 35, "speed": 10},
+            3: {"name": "命运织者", "skills": ["命运转轮", "因果操控"], "hp": 690, "attack": 178, "defense": 50, "speed": 12},
+            2: {"name": "因果之主", "skills": ["命运转轮", "因果操控"], "hp": 990, "attack": 280, "defense": 78, "speed": 15},
+            1: {"name": "命运化身", "skills": ["命运转轮", "因果操控"], "hp": 1470, "attack": 448, "defense": 118, "speed": 18},
+            0: {"name": "命运女神", "skills": ["命运转轮", "因果操控"], "hp": 2900, "attack": 795, "defense": 195, "speed": 25},
+        }
+    },
+    "女巫": {
+        "name": "女巫途径",
+        "god": "原罪之母",
+        "type": "magic",
+        "color": (128, 0, 64),  # 暗紫红
+        "desc": "诅咒与欲望之道，以情感为武器",
+        "sequences": {
+            9: {"name": "女巫", "skills": ["魅惑术", "诅咒"], "hp": 90, "attack": 17, "defense": 4, "speed": 5},
+            8: {"name": "诱惑者", "skills": ["魅惑术", "诅咒"], "hp": 140, "attack": 27, "defense": 7, "speed": 6},
+            7: {"name": "恶魔女", "skills": ["魅惑术", "诅咒"], "hp": 190, "attack": 42, "defense": 10, "speed": 7},
+            6: {"name": "欲望主宰", "skills": ["魅惑术", "诅咒"], "hp": 265, "attack": 62, "defense": 15, "speed": 8},
+            5: {"name": "诅咒师", "skills": ["魅惑术", "诅咒"], "hp": 365, "attack": 88, "defense": 22, "speed": 9},
+            4: {"name": "黑巫", "skills": ["魅惑术", "诅咒"], "hp": 485, "attack": 124, "defense": 32, "speed": 10},
+            3: {"name": "原罪之女", "skills": ["魅惑术", "诅咒"], "hp": 680, "attack": 184, "defense": 46, "speed": 12},
+            2: {"name": "欲望化身", "skills": ["魅惑术", "诅咒"], "hp": 980, "attack": 288, "defense": 72, "speed": 15},
+            1: {"name": "罪恶之母", "skills": ["魅惑术", "诅咒"], "hp": 1450, "attack": 462, "defense": 110, "speed": 18},
+            0: {"name": "原罪之母", "skills": ["魅惑术", "诅咒"], "hp": 2850, "attack": 820, "defense": 185, "speed": 25},
+        }
+    },
 }
 
 # 获取途径列表（按类型分组）

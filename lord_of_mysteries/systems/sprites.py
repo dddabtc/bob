@@ -55,7 +55,7 @@ class SpriteManager:
     def __init__(self):
         self.base_path = None
         self.pathway_sprites = {}  # 按途径存储的精灵图集 {pathway_name: sprite_sheet}
-        self.sequence_sprites = {}  # 按序列存储的角色图片 {sequence: sprite}
+        self.all_sequence_sprites = {}  # 预缓存所有途径的序列图片 {pathway_name: {sequence: sprite}}
         self.current_pathway = "占卜家"  # 当前途径
 
     def init(self, base_path):
@@ -64,7 +64,7 @@ class SpriteManager:
         self._load_all_pathways()
 
     def _load_all_pathways(self):
-        """加载所有可用的途径图片"""
+        """加载所有可用的途径图片并预分割"""
         if not self.base_path:
             return
 
@@ -80,79 +80,55 @@ class SpriteManager:
                 try:
                     sprite_sheet = pygame.image.load(file_path).convert_alpha()
                     self.pathway_sprites[pathway_name] = sprite_sheet
+                    # 预分割并缓存所有序列图片
+                    self._split_and_cache_pathway(pathway_name, sprite_sheet)
                     print(f"加载途径图片成功: {pathway_name} ({file_name}.png)")
                 except Exception as e:
                     print(f"加载途径图片失败 {pathway_name}: {e}")
 
-        # 默认加载占卜家途径的序列图片
-        if "占卜家" in self.pathway_sprites:
-            self._split_pathway_sheet("占卜家")
-
-    def set_current_pathway(self, pathway_name):
-        """设置当前途径并加载对应的序列图片"""
-        if pathway_name == self.current_pathway:
-            return
-
-        self.current_pathway = pathway_name
-        if pathway_name in self.pathway_sprites:
-            self._split_pathway_sheet(pathway_name)
-
-    def _split_pathway_sheet(self, pathway_name):
-        """将途径图集分割为单个序列图片"""
-        if pathway_name not in self.pathway_sprites:
-            return
-
-        sprite_sheet = self.pathway_sprites[pathway_name]
+    def _split_and_cache_pathway(self, pathway_name, sprite_sheet):
+        """预分割途径图集并缓存"""
         sheet_width = sprite_sheet.get_width()
         sheet_height = sprite_sheet.get_height()
 
-        # 图片布局: 2行5列，每个角色图片
         cols = 5
         rows = 2
         char_width = sheet_width // cols
         char_height = sheet_height // rows
 
-        # 序列对应位置 (行, 列) - 从序列9开始，到序列0
-        # 第一行: 序列9, 8, 7, 6, 5
-        # 第二行: 序列4, 3, 2, 1, 0
         sequence_positions = {
-            9: (0, 0),
-            8: (0, 1),
-            7: (0, 2),
-            6: (0, 3),
-            5: (0, 4),
-            4: (1, 0),
-            3: (1, 1),
-            2: (1, 2),
-            1: (1, 3),
-            0: (1, 4),
+            9: (0, 0), 8: (0, 1), 7: (0, 2), 6: (0, 3), 5: (0, 4),
+            4: (1, 0), 3: (1, 1), 2: (1, 2), 1: (1, 3), 0: (1, 4),
         }
 
-        self.sequence_sprites.clear()
+        self.all_sequence_sprites[pathway_name] = {}
         for sequence, (row, col) in sequence_positions.items():
             x = col * char_width
             y = row * char_height
-
-            # 裁剪出单个角色
             sprite = pygame.Surface((char_width, char_height), pygame.SRCALPHA)
             sprite.blit(sprite_sheet, (0, 0), (x, y, char_width, char_height))
+            self.all_sequence_sprites[pathway_name][sequence] = sprite
 
-            self.sequence_sprites[sequence] = sprite
+    def set_current_pathway(self, pathway_name):
+        """设置当前途径（仅切换指针，不重新分割）"""
+        if pathway_name in self.all_sequence_sprites:
+            self.current_pathway = pathway_name
 
     def get_character_sprite(self, sequence, size=None):
-        """获取指定序列的角色图片"""
-        if sequence in self.sequence_sprites:
-            sprite = self.sequence_sprites[sequence]
-            if size:
-                return pygame.transform.scale(sprite, size)
-            return sprite
+        """获取指定序列的角色图片（从预缓存中获取）"""
+        if self.current_pathway in self.all_sequence_sprites:
+            pathway_sprites = self.all_sequence_sprites[self.current_pathway]
+            if sequence in pathway_sprites:
+                sprite = pathway_sprites[sequence]
+                if size:
+                    return pygame.transform.scale(sprite, size)
+                return sprite
         return None
 
     def get_character_portrait(self, sequence, size=(80, 100)):
         """获取角色头像（用于HUD等）"""
         sprite = self.get_character_sprite(sequence)
         if sprite:
-            # 裁剪上半部分作为头像
             portrait_height = sprite.get_height() // 2
             portrait = pygame.Surface((sprite.get_width(), portrait_height), pygame.SRCALPHA)
             portrait.blit(sprite, (0, 0))
@@ -165,7 +141,7 @@ class SpriteManager:
 
     def has_pathway_sprites(self, pathway_name):
         """检查途径是否有对应的图片"""
-        return pathway_name in self.pathway_sprites
+        return pathway_name in self.all_sequence_sprites
 
 
 # 全局精灵管理器实例
