@@ -6,7 +6,7 @@ import pygame
 import sys
 sys.path.append('..')
 from settings import *
-from systems.sprites import get_sequence_sprite, get_sequence_portrait
+from systems.sprites import get_sequence_sprite, get_sequence_portrait, set_pathway
 
 
 class PathwayCard:
@@ -237,6 +237,9 @@ class PathwaySelectUI:
         """绘制选中途径的详细信息"""
         data = self.pathways[self.selected_pathway]
 
+        # 切换到选中的途径图片
+        set_pathway(self.selected_pathway)
+
         # 详情面板
         panel_rect = pygame.Rect(80, 360, SCREEN_WIDTH - 160, 280)
         pygame.draw.rect(self.screen, (30, 30, 50), panel_rect, border_radius=10)
@@ -373,6 +376,9 @@ class PathwayConfirmUI:
     def draw(self):
         """绘制确认界面"""
         self.screen.fill(MENU_BG)
+
+        # 切换到选中的途径图片
+        set_pathway(self.pathway_id)
 
         # 标题
         title = self.fonts["large"].render("确认选择", True, GOLD)

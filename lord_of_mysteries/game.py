@@ -21,7 +21,7 @@ from systems.inventory import Inventory
 from systems.potion import PotionSystem
 from systems.quest import QuestSystem
 from systems.lighting import LightingSystem, Light, TorchLight
-from systems.sprites import init_sprites
+from systems.sprites import init_sprites, set_pathway
 
 
 class Game:
@@ -294,6 +294,9 @@ class Game:
     def _start_game(self, pathway_id):
         """开始游戏"""
         self.player_pathway = pathway_id
+
+        # 切换到选中途径的角色图片
+        set_pathway(pathway_id)
 
         self.player = Player(
             x=SCREEN_WIDTH // 2,
