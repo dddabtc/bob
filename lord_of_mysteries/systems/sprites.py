@@ -1,6 +1,7 @@
 """
 精灵图系统 - 加载和管理角色图片
 支持从单独文件加载每个途径的角色图片
+启动时显示进度条，预缩放常用尺寸
 """
 
 import pygame
@@ -21,7 +22,7 @@ PATHWAY_FILE_NAMES = {
     "巨人": "Giant",
     "吟游诗人": "Bard",
     "学徒": "Apprentice",
-    # 新增11条途径
+    # 新增途径
     "深渊": "ABYSS",
     "黑皇帝": "BLACK EMPEROR",
     "囚徒": "CHAINED",
@@ -32,20 +33,15 @@ PATHWAY_FILE_NAMES = {
     "完美者": "PERFECTIONIST",
     "命运之轮": "THE WHEEL OF FORTUNE",
     "女巫": "Witch",
+    "秘祈人": "SECRETS SUPPLICANT",
 }
 
-# 序列号到序列名称的映射（占卜家途径）
-SEER_SEQUENCE_NAMES = {
-    9: "占卜家",
-    8: "小丑",
-    7: "魔术师",
-    6: "无面人",
-    5: "秘偶大师",
-    4: "诡法师",
-    3: "古代学者",
-    2: "奇迹师",
-    1: "诡秘侍者",
-    0: "愚者",
+# 预缩放的常用尺寸
+PRESET_SIZES = {
+    "tiny": (50, 65),      # 序列预览小图标
+    "small": (60, 80),     # 游戏中角色
+    "medium": (120, 160),  # 途径详情
+    "large": (180, 240),   # 确认界面大图
 }
 
 
@@ -54,17 +50,58 @@ class SpriteManager:
 
     def __init__(self):
         self.base_path = None
-        self.pathway_sprites = {}  # 按途径存储的精灵图集 {pathway_name: sprite_sheet}
-        self.all_sequence_sprites = {}  # 预缓存所有途径的序列图片 {pathway_name: {sequence: sprite}}
-        self.current_pathway = "占卜家"  # 当前途径
+        self.all_sequence_sprites = {}  # {pathway_name: {sequence: {size_name: sprite}}}
+        self.current_pathway = "占卜家"
+        self.loading_progress = 0
+        self.loading_total = 0
+        self.loading_current = ""
 
-    def init(self, base_path):
-        """初始化精灵图系统"""
+    def init_with_progress(self, base_path, screen):
+        """带进度条的初始化"""
         self.base_path = base_path
-        self._load_all_pathways()
+        self._load_all_pathways_with_progress(screen)
 
-    def _load_all_pathways(self):
-        """加载所有可用的途径图片并预分割"""
+    def _draw_loading_screen(self, screen, progress, total, current_name):
+        """绘制加载进度界面"""
+        screen.fill((20, 20, 30))
+
+        # 标题
+        font_large = pygame.font.Font(None, 48)
+        font_small = pygame.font.Font(None, 24)
+
+        title = font_large.render("Loading...", True, (218, 165, 32))
+        title_rect = title.get_rect(center=(screen.get_width() // 2, screen.get_height() // 2 - 60))
+        screen.blit(title, title_rect)
+
+        # 当前加载项
+        if current_name:
+            current = font_small.render(f"Loading: {current_name}", True, (150, 150, 150))
+            current_rect = current.get_rect(center=(screen.get_width() // 2, screen.get_height() // 2 - 20))
+            screen.blit(current, current_rect)
+
+        # 进度条背景
+        bar_width = 400
+        bar_height = 20
+        bar_x = (screen.get_width() - bar_width) // 2
+        bar_y = screen.get_height() // 2 + 20
+        pygame.draw.rect(screen, (50, 50, 60), (bar_x, bar_y, bar_width, bar_height), border_radius=10)
+
+        # 进度条填充
+        if total > 0:
+            fill_width = int((progress / total) * bar_width)
+            if fill_width > 0:
+                pygame.draw.rect(screen, (100, 180, 100), (bar_x, bar_y, fill_width, bar_height), border_radius=10)
+
+        # 进度文字
+        percent = int((progress / total) * 100) if total > 0 else 0
+        progress_text = font_small.render(f"{progress}/{total} ({percent}%)", True, (200, 200, 200))
+        progress_rect = progress_text.get_rect(center=(screen.get_width() // 2, bar_y + 45))
+        screen.blit(progress_text, progress_rect)
+
+        pygame.display.flip()
+
+    def _load_all_pathways_with_progress(self, screen):
+        """带进度条加载所有途径图片"""
         if not self.base_path:
             return
 
@@ -73,21 +110,38 @@ class SpriteManager:
             print(f"角色图片目录不存在: {img_dir}")
             return
 
-        # 遍历所有途径，尝试加载对应的图片
+        # 计算总数
+        valid_pathways = []
         for pathway_name, file_name in PATHWAY_FILE_NAMES.items():
             file_path = os.path.join(img_dir, f"{file_name}.png")
             if os.path.exists(file_path):
-                try:
-                    sprite_sheet = pygame.image.load(file_path).convert_alpha()
-                    self.pathway_sprites[pathway_name] = sprite_sheet
-                    # 预分割并缓存所有序列图片
-                    self._split_and_cache_pathway(pathway_name, sprite_sheet)
-                    print(f"加载途径图片成功: {pathway_name} ({file_name}.png)")
-                except Exception as e:
-                    print(f"加载途径图片失败 {pathway_name}: {e}")
+                valid_pathways.append((pathway_name, file_name, file_path))
 
-    def _split_and_cache_pathway(self, pathway_name, sprite_sheet):
-        """预分割途径图集并缓存"""
+        total = len(valid_pathways)
+
+        # 加载每个途径
+        for i, (pathway_name, file_name, file_path) in enumerate(valid_pathways):
+            # 更新进度显示
+            self._draw_loading_screen(screen, i, total, pathway_name)
+
+            try:
+                # 加载原图
+                sprite_sheet = pygame.image.load(file_path).convert_alpha()
+                # 分割并预缩放
+                self._split_and_prescale(pathway_name, sprite_sheet)
+                print(f"加载途径图片成功: {pathway_name} ({file_name}.png)")
+            except Exception as e:
+                print(f"加载途径图片失败 {pathway_name}: {e}")
+
+            # 处理事件防止无响应
+            pygame.event.pump()
+
+        # 完成
+        self._draw_loading_screen(screen, total, total, "Complete!")
+        pygame.time.wait(300)
+
+    def _split_and_prescale(self, pathway_name, sprite_sheet):
+        """分割图集并预缩放到常用尺寸"""
         sheet_width = sprite_sheet.get_width()
         sheet_height = sprite_sheet.get_height()
 
@@ -102,42 +156,66 @@ class SpriteManager:
         }
 
         self.all_sequence_sprites[pathway_name] = {}
+
         for sequence, (row, col) in sequence_positions.items():
             x = col * char_width
             y = row * char_height
-            sprite = pygame.Surface((char_width, char_height), pygame.SRCALPHA)
-            sprite.blit(sprite_sheet, (0, 0), (x, y, char_width, char_height))
-            self.all_sequence_sprites[pathway_name][sequence] = sprite
+
+            # 裁剪原始尺寸
+            original = pygame.Surface((char_width, char_height), pygame.SRCALPHA)
+            original.blit(sprite_sheet, (0, 0), (x, y, char_width, char_height))
+
+            # 预缩放到各种常用尺寸
+            self.all_sequence_sprites[pathway_name][sequence] = {
+                "original": original,
+            }
+            for size_name, size in PRESET_SIZES.items():
+                scaled = pygame.transform.smoothscale(original, size)
+                self.all_sequence_sprites[pathway_name][sequence][size_name] = scaled
 
     def set_current_pathway(self, pathway_name):
-        """设置当前途径（仅切换指针，不重新分割）"""
+        """设置当前途径"""
         if pathway_name in self.all_sequence_sprites:
             self.current_pathway = pathway_name
 
     def get_character_sprite(self, sequence, size=None):
-        """获取指定序列的角色图片（从预缓存中获取）"""
-        if self.current_pathway in self.all_sequence_sprites:
-            pathway_sprites = self.all_sequence_sprites[self.current_pathway]
-            if sequence in pathway_sprites:
-                sprite = pathway_sprites[sequence]
-                if size:
-                    return pygame.transform.scale(sprite, size)
-                return sprite
+        """获取角色图片（优先使用预缩放版本）"""
+        if self.current_pathway not in self.all_sequence_sprites:
+            return None
+
+        pathway_sprites = self.all_sequence_sprites[self.current_pathway]
+        if sequence not in pathway_sprites:
+            return None
+
+        sprites = pathway_sprites[sequence]
+
+        if size is None:
+            return sprites.get("original")
+
+        # 查找匹配的预缩放尺寸
+        for size_name, preset_size in PRESET_SIZES.items():
+            if size == preset_size:
+                return sprites.get(size_name)
+
+        # 找不到预设尺寸，动态缩放（较少发生）
+        original = sprites.get("original")
+        if original:
+            return pygame.transform.smoothscale(original, size)
         return None
 
     def get_character_portrait(self, sequence, size=(80, 100)):
-        """获取角色头像（用于HUD等）"""
+        """获取角色头像"""
         sprite = self.get_character_sprite(sequence)
         if sprite:
             portrait_height = sprite.get_height() // 2
             portrait = pygame.Surface((sprite.get_width(), portrait_height), pygame.SRCALPHA)
             portrait.blit(sprite, (0, 0))
-            return pygame.transform.scale(portrait, size)
+            return pygame.transform.smoothscale(portrait, size)
         return None
 
     def get_available_pathways(self):
         """获取已加载的途径列表"""
-        return list(self.pathway_sprites.keys())
+        return list(self.all_sequence_sprites.keys())
 
     def has_pathway_sprites(self, pathway_name):
         """检查途径是否有对应的图片"""
@@ -148,10 +226,19 @@ class SpriteManager:
 sprite_manager = SpriteManager()
 
 
+def init_sprites_with_progress(base_path, screen):
+    """带进度条初始化精灵图系统"""
+    sprite_manager.init_with_progress(base_path, screen)
+    return len(sprite_manager.all_sequence_sprites) > 0
+
+
 def init_sprites(base_path):
-    """初始化精灵图系统"""
-    sprite_manager.init(base_path)
-    return len(sprite_manager.pathway_sprites) > 0
+    """初始化精灵图系统（无进度条，兼容旧接口）"""
+    # 创建临时窗口显示进度
+    screen = pygame.display.get_surface()
+    if screen:
+        sprite_manager.init_with_progress(base_path, screen)
+    return len(sprite_manager.all_sequence_sprites) > 0
 
 
 def set_pathway(pathway_name):

@@ -464,6 +464,25 @@ PATHWAYS = {
             0: {"name": "原罪之母", "skills": ["魅惑术", "诅咒"], "hp": 2850, "attack": 820, "defense": 185, "speed": 25},
         }
     },
+    "秘祈人": {
+        "name": "秘祈人途径",
+        "god": "隐秘之神",
+        "type": "wisdom",
+        "color": (100, 60, 120),  # 深紫
+        "desc": "秘密与祈祷之道，探寻隐藏的真理",
+        "sequences": {
+            9: {"name": "秘祈人", "skills": ["秘密感知", "祈祷"], "hp": 95, "attack": 15, "defense": 5, "speed": 5},
+            8: {"name": "窥秘者", "skills": ["秘密感知", "祈祷"], "hp": 145, "attack": 25, "defense": 8, "speed": 6},
+            7: {"name": "解谜者", "skills": ["秘密感知", "祈祷"], "hp": 195, "attack": 39, "defense": 12, "speed": 7},
+            6: {"name": "密语者", "skills": ["秘密感知", "祈祷"], "hp": 270, "attack": 59, "defense": 18, "speed": 8},
+            5: {"name": "秘密守护者", "skills": ["秘密感知", "祈祷"], "hp": 370, "attack": 85, "defense": 25, "speed": 9},
+            4: {"name": "神秘学家", "skills": ["秘密感知", "祈祷"], "hp": 490, "attack": 120, "defense": 35, "speed": 10},
+            3: {"name": "秘密主宰", "skills": ["秘密感知", "祈祷"], "hp": 690, "attack": 178, "defense": 50, "speed": 12},
+            2: {"name": "隐秘使者", "skills": ["秘密感知", "祈祷"], "hp": 990, "attack": 280, "defense": 78, "speed": 15},
+            1: {"name": "秘密化身", "skills": ["秘密感知", "祈祷"], "hp": 1470, "attack": 448, "defense": 118, "speed": 18},
+            0: {"name": "隐秘之神", "skills": ["秘密感知", "祈祷"], "hp": 2900, "attack": 795, "defense": 195, "speed": 25},
+        }
+    },
 }
 
 # 获取途径列表（按类型分组）
