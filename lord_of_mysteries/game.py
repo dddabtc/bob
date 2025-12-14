@@ -21,6 +21,7 @@ from systems.inventory import Inventory
 from systems.potion import PotionSystem
 from systems.quest import QuestSystem
 from systems.lighting import LightingSystem, Light, TorchLight
+from systems.sprites import init_sprites
 
 
 class Game:
@@ -87,6 +88,11 @@ class Game:
         self.lighting = LightingSystem(SCREEN_WIDTH, SCREEN_HEIGHT)
         self.lighting.set_ambient(50)  # 设置较暗的环境光
         self._init_background_lights()
+
+        # 加载精灵图
+        import os
+        base_path = os.path.dirname(os.path.abspath(__file__))
+        init_sprites(base_path)
 
         # 帧时间
         self.dt = 0

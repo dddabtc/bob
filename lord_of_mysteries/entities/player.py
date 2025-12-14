@@ -34,6 +34,11 @@ class Player:
         self.size = PLAYER_SIZE
         self.name = self.seq_data["name"]
 
+        # 精灵图
+        self.sprite = None
+        self.sprite_size = (60, 80)  # 游戏中显示的大小
+        self._load_sprite()
+
         # 方向 (1=右, -1=左)
         self.facing = 1
 
@@ -79,6 +84,15 @@ class Player:
                 skill_data["current_cooldown"] = 0
                 skill_data["name"] = skill_name
                 self.skills[skill_name] = skill_data
+
+    def _load_sprite(self):
+        """加载角色精灵图"""
+        try:
+            from systems.sprites import get_sequence_sprite
+            self.sprite = get_sequence_sprite(self.sequence, self.sprite_size)
+        except Exception as e:
+            print(f"加载精灵图失败: {e}")
+            self.sprite = None
 
     def get_skill_list(self):
         """获取技能列表（前4个）"""
@@ -453,47 +467,64 @@ class Player:
             if int(time.time() * 10) % 2 == 0:
                 alpha = 128
 
-        # 玩家身体
-        player_surface = pygame.Surface((self.size, self.size), pygame.SRCALPHA)
+        # 优先使用精灵图
+        if self.sprite:
+            # 创建临时surface用于应用透明度和翻转
+            sprite_to_draw = self.sprite.copy()
 
-        # 根据状态绘制不同效果
-        if self.is_attacking:
-            # 攻击时颜色变亮
-            color = tuple(min(255, c + 50) for c in self.color)
-        elif self.is_dodging:
-            # 闪避时颜色变淡
-            color = tuple(c // 2 for c in self.color)
+            # 根据面朝方向翻转
+            if self.facing == -1:
+                sprite_to_draw = pygame.transform.flip(sprite_to_draw, True, False)
+
+            # 应用透明度
+            if alpha < 255:
+                sprite_to_draw.set_alpha(alpha)
+
+            # 攻击时添加发光效果
+            if self.is_attacking:
+                glow = pygame.Surface(self.sprite_size, pygame.SRCALPHA)
+                glow.fill((*self.color, 50))
+                sprite_to_draw.blit(glow, (0, 0), special_flags=pygame.BLEND_RGBA_ADD)
+
+            # 绘制精灵图（居中于玩家位置）
+            sprite_x = self.x - self.sprite_size[0] // 2
+            sprite_y = self.y - self.sprite_size[1] // 2
+            screen.blit(sprite_to_draw, (sprite_x, sprite_y))
         else:
-            color = self.color
+            # 备用：绘制简单圆形
+            player_surface = pygame.Surface((self.size, self.size), pygame.SRCALPHA)
 
-        # 绘制圆形身体
-        pygame.draw.circle(
-            player_surface,
-            (*color, alpha),
-            (self.size // 2, self.size // 2),
-            self.size // 2
-        )
+            if self.is_attacking:
+                color = tuple(min(255, c + 50) for c in self.color)
+            elif self.is_dodging:
+                color = tuple(c // 2 for c in self.color)
+            else:
+                color = self.color
 
-        # 边框
-        pygame.draw.circle(
-            player_surface,
-            (255, 255, 255, alpha),
-            (self.size // 2, self.size // 2),
-            self.size // 2,
-            2
-        )
+            pygame.draw.circle(
+                player_surface,
+                (*color, alpha),
+                (self.size // 2, self.size // 2),
+                self.size // 2
+            )
+            pygame.draw.circle(
+                player_surface,
+                (255, 255, 255, alpha),
+                (self.size // 2, self.size // 2),
+                self.size // 2,
+                2
+            )
 
-        # 面朝方向指示器
-        indicator_x = self.size // 2 + self.facing * 10
-        indicator_y = self.size // 2
-        pygame.draw.circle(
-            player_surface,
-            (255, 255, 255, alpha),
-            (indicator_x, indicator_y),
-            5
-        )
+            indicator_x = self.size // 2 + self.facing * 10
+            indicator_y = self.size // 2
+            pygame.draw.circle(
+                player_surface,
+                (255, 255, 255, alpha),
+                (indicator_x, indicator_y),
+                5
+            )
 
-        screen.blit(player_surface, (self.x - self.size // 2, self.y - self.size // 2))
+            screen.blit(player_surface, (self.x - self.size // 2, self.y - self.size // 2))
 
         # 绘制攻击效果
         if self.is_attacking and self.attack_hitbox:

@@ -6,6 +6,7 @@ import pygame
 import sys
 sys.path.append('..')
 from settings import *
+from systems.sprites import get_sequence_sprite, get_sequence_portrait
 
 
 class PathwayCard:
@@ -241,47 +242,61 @@ class PathwaySelectUI:
         pygame.draw.rect(self.screen, (30, 30, 50), panel_rect, border_radius=10)
         pygame.draw.rect(self.screen, data["color"], panel_rect, 2, border_radius=10)
 
-        # 途径名称
+        # 绘制角色图片（序列9）
+        sprite = get_sequence_sprite(9, (120, 160))
+        if sprite:
+            # 角色图片背景框
+            sprite_bg = pygame.Rect(100, 380, 130, 170)
+            pygame.draw.rect(self.screen, (20, 20, 35), sprite_bg, border_radius=8)
+            pygame.draw.rect(self.screen, data["color"], sprite_bg, 2, border_radius=8)
+            # 绘制角色
+            self.screen.blit(sprite, (105, 385))
+
+        # 途径名称（右移以避开角色图片）
         name = self.fonts["medium"].render(f"{data['name']}", True, data["color"])
-        self.screen.blit(name, (100, 375))
+        self.screen.blit(name, (250, 375))
 
         # 对应神灵
         god = self.fonts["small"].render(f"对应神灵: {data['god']}", True, WHITE)
-        self.screen.blit(god, (350, 380))
+        self.screen.blit(god, (450, 380))
 
-        # 途径描述
+        # 途径描述（右侧显示）
         desc = self.fonts["small"].render(data["desc"], True, GRAY)
-        self.screen.blit(desc, (100, 415))
+        self.screen.blit(desc, (250, 410))
 
-        # 序列信息
-        seq_y = 455
+        # 序列信息（右侧显示）
+        info_x = 250
+        seq_y = 445
         seq_title = self.fonts["small"].render("序列晋升路线:", True, GOLD)
-        self.screen.blit(seq_title, (100, seq_y))
+        self.screen.blit(seq_title, (info_x, seq_y))
 
-        # 显示序列9到序列4
-        seq_y += 30
+        # 显示序列9到序列0
+        seq_y += 28
         sequences = data["sequences"]
         seq_text = ""
-        for seq in [9, 8, 7, 6, 5, 4]:
+        for seq in [9, 8, 7, 6, 5, 4, 3, 2, 1, 0]:
             if seq in sequences:
                 if seq_text:
                     seq_text += " → "
                 seq_text += f"{sequences[seq]['name']}({seq})"
 
-        # 分行显示
-        seq_line1 = self.fonts["tiny"].render(seq_text[:60], True, WHITE)
-        self.screen.blit(seq_line1, (100, seq_y))
-        if len(seq_text) > 60:
-            seq_line2 = self.fonts["tiny"].render(seq_text[60:], True, WHITE)
-            self.screen.blit(seq_line2, (100, seq_y + 25))
+        # 分行显示（更紧凑）
+        seq_line1 = self.fonts["tiny"].render(seq_text[:55], True, WHITE)
+        self.screen.blit(seq_line1, (info_x, seq_y))
+        if len(seq_text) > 55:
+            seq_line2 = self.fonts["tiny"].render(seq_text[55:110], True, WHITE)
+            self.screen.blit(seq_line2, (info_x, seq_y + 22))
+            if len(seq_text) > 110:
+                seq_line3 = self.fonts["tiny"].render(seq_text[110:], True, WHITE)
+                self.screen.blit(seq_line3, (info_x, seq_y + 44))
 
         # 初始属性
         seq9 = sequences[9]
-        attr_y = seq_y + 60
+        attr_y = seq_y + 70
         attr_title = self.fonts["small"].render("初始属性 (序列9):", True, GOLD)
-        self.screen.blit(attr_title, (100, attr_y))
+        self.screen.blit(attr_title, (info_x, attr_y))
 
-        attr_y += 28
+        attr_y += 25
         attrs = [
             f"HP: {seq9['hp']}",
             f"攻击: {seq9['attack']}",
@@ -289,17 +304,17 @@ class PathwaySelectUI:
             f"速度: {seq9['speed']}"
         ]
         attr_text = self.fonts["tiny"].render("  |  ".join(attrs), True, WHITE)
-        self.screen.blit(attr_text, (100, attr_y))
+        self.screen.blit(attr_text, (info_x, attr_y))
 
         # 初始技能
-        skill_y = attr_y + 28
+        skill_y = attr_y + 25
         skill_title = self.fonts["small"].render("初始技能:", True, GOLD)
-        self.screen.blit(skill_title, (100, skill_y))
+        self.screen.blit(skill_title, (info_x, skill_y))
 
-        skill_y += 28
+        skill_y += 25
         skills_text = ", ".join(seq9["skills"])
         skills = self.fonts["tiny"].render(skills_text, True, WHITE)
-        self.screen.blit(skills, (100, skill_y))
+        self.screen.blit(skills, (info_x, skill_y))
 
     def _draw_pagination(self):
         """绘制分页信息"""
@@ -361,13 +376,31 @@ class PathwayConfirmUI:
 
         # 标题
         title = self.fonts["large"].render("确认选择", True, GOLD)
-        title_rect = title.get_rect(center=(SCREEN_WIDTH // 2, 80))
+        title_rect = title.get_rect(center=(SCREEN_WIDTH // 2, 50))
         self.screen.blit(title, title_rect)
+
+        # 绘制角色图片（大尺寸，居中偏左）
+        sprite = get_sequence_sprite(9, (180, 240))
+        if sprite:
+            # 角色图片背景框
+            sprite_x = 120
+            sprite_y = 120
+            sprite_bg = pygame.Rect(sprite_x - 10, sprite_y - 10, 200, 260)
+            pygame.draw.rect(self.screen, (20, 20, 35), sprite_bg, border_radius=10)
+            pygame.draw.rect(self.screen, self.data["color"], sprite_bg, 2, border_radius=10)
+            # 添加光晕效果
+            glow = pygame.Surface((220, 280), pygame.SRCALPHA)
+            pygame.draw.rect(glow, (*self.data["color"], 30), (0, 0, 220, 280), border_radius=12)
+            self.screen.blit(glow, (sprite_x - 20, sprite_y - 20))
+            # 绘制角色
+            self.screen.blit(sprite, (sprite_x, sprite_y))
+
+        # 右侧信息区域
+        info_x = 380
 
         # 途径名称
         name = self.fonts["title"].render(self.data["name"], True, self.data["color"])
-        name_rect = name.get_rect(center=(SCREEN_WIDTH // 2, 180))
-        self.screen.blit(name, name_rect)
+        self.screen.blit(name, (info_x, 100))
 
         # 序列9职业
         seq9 = self.data["sequences"][9]
@@ -375,16 +408,14 @@ class PathwayConfirmUI:
             f"你将成为: {seq9['name']} (序列9)",
             True, WHITE
         )
-        seq_rect = seq_text.get_rect(center=(SCREEN_WIDTH // 2, 260))
-        self.screen.blit(seq_text, seq_rect)
+        self.screen.blit(seq_text, (info_x, 160))
 
         # 途径描述
         desc = self.fonts["small"].render(self.data["desc"], True, GRAY)
-        desc_rect = desc.get_rect(center=(SCREEN_WIDTH // 2, 320))
-        self.screen.blit(desc, desc_rect)
+        self.screen.blit(desc, (info_x, 210))
 
         # 初始属性
-        attr_y = 380
+        attr_y = 270
         attrs = [
             ("生命值", seq9["hp"], HP_GREEN),
             ("攻击力", seq9["attack"], CRIMSON),
@@ -392,27 +423,49 @@ class PathwayConfirmUI:
             ("速度", seq9["speed"], (255, 200, 100)),
         ]
 
-        start_x = SCREEN_WIDTH // 2 - 250
         for i, (attr_name, value, color) in enumerate(attrs):
-            x = start_x + i * 130
+            x = info_x + i * 120
             attr_text = self.fonts["small"].render(attr_name, True, GRAY)
             self.screen.blit(attr_text, (x, attr_y))
 
             value_text = self.fonts["medium"].render(str(value), True, color)
-            self.screen.blit(value_text, (x, attr_y + 30))
+            self.screen.blit(value_text, (x, attr_y + 28))
 
         # 初始技能
-        skill_y = 480
+        skill_y = 360
         skill_title = self.fonts["small"].render("初始技能:", True, GOLD)
-        skill_rect = skill_title.get_rect(center=(SCREEN_WIDTH // 2, skill_y))
-        self.screen.blit(skill_title, skill_rect)
+        self.screen.blit(skill_title, (info_x, skill_y))
 
         skills_text = self.fonts["medium"].render(
             " | ".join(seq9["skills"]),
             True, WHITE
         )
-        skills_rect = skills_text.get_rect(center=(SCREEN_WIDTH // 2, skill_y + 40))
-        self.screen.blit(skills_text, skills_rect)
+        self.screen.blit(skills_text, (info_x, skill_y + 30))
+
+        # 绘制序列晋升预览（下方区域）
+        preview_y = 450
+        preview_title = self.fonts["small"].render("序列晋升预览:", True, GOLD)
+        self.screen.blit(preview_title, (120, preview_y))
+
+        # 显示所有序列的小图标
+        sequences = self.data["sequences"]
+        icon_size = (50, 65)
+        icon_x = 120
+        for seq in [9, 8, 7, 6, 5, 4, 3, 2, 1, 0]:
+            if seq in sequences:
+                seq_sprite = get_sequence_sprite(seq, icon_size)
+                if seq_sprite:
+                    # 小图标背景
+                    icon_bg = pygame.Rect(icon_x - 2, preview_y + 30, icon_size[0] + 4, icon_size[1] + 20)
+                    pygame.draw.rect(self.screen, (30, 30, 45), icon_bg, border_radius=5)
+                    pygame.draw.rect(self.screen, (60, 60, 80), icon_bg, 1, border_radius=5)
+                    # 绘制图标
+                    self.screen.blit(seq_sprite, (icon_x, preview_y + 35))
+                    # 序列号
+                    seq_num = self.fonts["tiny"].render(f"S{seq}", True, WHITE)
+                    seq_num_rect = seq_num.get_rect(center=(icon_x + icon_size[0] // 2, preview_y + 105))
+                    self.screen.blit(seq_num, seq_num_rect)
+                icon_x += 90
 
         # 确认提示
         confirm_text = self.fonts["small"].render(
