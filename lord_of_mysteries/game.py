@@ -20,6 +20,7 @@ from data.items import MATERIALS, QUALITY_COLORS
 from systems.inventory import Inventory
 from systems.potion import PotionSystem
 from systems.quest import QuestSystem
+from systems.lighting import LightingSystem, Light, TorchLight
 
 
 class Game:
@@ -82,11 +83,27 @@ class Game:
         # 任务系统
         self.quest_system = QuestSystem()
 
+        # 光影系统
+        self.lighting = LightingSystem(SCREEN_WIDTH, SCREEN_HEIGHT)
+        self.lighting.set_ambient(50)  # 设置较暗的环境光
+        self._init_background_lights()
+
         # 帧时间
         self.dt = 0
 
         # 事件缓存
         self.events = []
+
+    def _init_background_lights(self):
+        """初始化背景光源（街灯等）"""
+        # 添加街灯
+        street_lamp_positions = [150, 400, 650, 900]
+        for x in street_lamp_positions:
+            lamp = TorchLight(x, SCREEN_HEIGHT - 180)
+            lamp.radius = 120
+            lamp.color = (255, 180, 80)
+            lamp.intensity = 0.5
+            self.lighting.add_light(lamp)
 
     def _load_fonts(self):
         """加载字体"""
@@ -303,6 +320,10 @@ class Game:
         # 重置任务系统
         self.quest_system = QuestSystem()
 
+        # 创建玩家光源
+        pathway_color = PATHWAYS[pathway_id].get("color", GOLD)
+        self.lighting.create_player_light(self.player.x, self.player.y, pathway_color)
+
         self.state = GameState.PLAYING
 
     def _reset_game(self):
@@ -363,6 +384,11 @@ class Game:
         # 更新对话框
         self.dialogue_box.update(self.dt)
 
+        # 更新光影系统
+        self.lighting.update(self.dt)
+        if self.lighting.player_light:
+            self.lighting.player_light.set_position(self.player.x, self.player.y)
+
         # 检查玩家是否死亡
         if not self.player.is_alive():
             self._handle_player_death()
@@ -371,6 +397,10 @@ class Game:
         """更新所有敌人"""
         for enemy in self.enemies[:]:
             enemy.update(self.dt, self.player)
+
+            # 更新敌人光源位置
+            if hasattr(enemy, 'light') and enemy.light:
+                enemy.light.set_position(enemy.x, enemy.y)
 
             # 处理敌人召唤
             for summon in enemy.summons_to_spawn:
@@ -468,6 +498,15 @@ class Game:
         enemy = Enemy(x, y, enemy_data)
         self.enemies.append(enemy)
 
+        # 为精英和BOSS添加光源
+        if enemy.enemy_type in ["elite", "boss"]:
+            light = Light(x, y, radius=100 if enemy.enemy_type == "boss" else 60,
+                         color=enemy.color, intensity=0.6, flicker=True)
+            enemy.light = light
+            self.lighting.add_light(light)
+        else:
+            enemy.light = None
+
     def _check_combat(self):
         """检查战斗碰撞"""
         if not self.player:
@@ -482,6 +521,15 @@ class Game:
                 if self.player.attack_hitbox.colliderect(enemy_rect):
                     damage = self.player.get_attack_damage()
                     actual_damage = enemy.take_damage(damage)
+
+                    # 攻击命中光效
+                    pathway_color = PATHWAYS[self.player_pathway].get("color", GOLD)
+                    self.lighting.add_skill_light(
+                        enemy.x, enemy.y,
+                        pathway_color,
+                        radius=60,
+                        duration=0.2
+                    )
 
                     self.damage_numbers.append(DamageNumber(
                         enemy.x, enemy.y - 20,
@@ -501,6 +549,15 @@ class Game:
                 enemy_rect = enemy.get_rect()
                 if proj_rect.colliderect(enemy_rect):
                     actual_damage = enemy.take_damage(proj["damage"])
+
+                    # 投射物命中光效
+                    self.lighting.add_skill_light(
+                        enemy.x, enemy.y,
+                        self.player.color,
+                        radius=50,
+                        duration=0.15
+                    )
+
                     self.damage_numbers.append(DamageNumber(
                         enemy.x, enemy.y - 20,
                         actual_damage,
@@ -557,6 +614,18 @@ class Game:
         """处理敌人死亡"""
         self.kill_count += 1
         self.total_exp += enemy.exp
+
+        # 移除敌人光源
+        if hasattr(enemy, 'light') and enemy.light:
+            self.lighting.remove_light(enemy.light)
+
+        # 添加死亡爆炸光效
+        self.lighting.add_explosion_light(
+            enemy.x, enemy.y,
+            enemy.color,
+            max_radius=80 if enemy.enemy_type == "boss" else 50,
+            duration=0.4
+        )
 
         # 通知任务系统
         updates = self.quest_system.on_enemy_killed(enemy.name)
@@ -678,9 +747,16 @@ class Game:
         self.screen.fill(MIDNIGHT_BLUE)
         self._draw_street_background()
 
-        # 绘制掉落物
+        # 绘制掉落物（带发光效果）
         for drop in self.drops:
             alpha = int(255 * min(1, drop["lifetime"]))
+            # 绘制光晕
+            glow_surface = pygame.Surface((40, 40), pygame.SRCALPHA)
+            glow_alpha = int(80 * min(1, drop["lifetime"]))
+            pygame.draw.circle(glow_surface, (255, 215, 0, glow_alpha), (20, 20), 18)
+            pygame.draw.circle(glow_surface, (255, 230, 100, glow_alpha // 2), (20, 20), 12)
+            self.screen.blit(glow_surface, (drop["x"] - 20, drop["y"] - 20))
+            # 绘制物品
             drop_surface = pygame.Surface((16, 16), pygame.SRCALPHA)
             pygame.draw.rect(drop_surface, (255, 215, 0, alpha), (0, 0, 16, 16), border_radius=3)
             pygame.draw.rect(drop_surface, (255, 255, 255, alpha), (0, 0, 16, 16), 1, border_radius=3)
@@ -701,6 +777,9 @@ class Game:
         # 绘制浮动文字
         for float_text in self.floating_texts:
             float_text.draw(self.screen, self.fonts)
+
+        # 渲染光影效果
+        self.lighting.render(self.screen)
 
         # 绘制HUD
         if self.player:
@@ -791,15 +870,45 @@ class Game:
             (950, 200, 100, 350),
         ]
 
+        # 绘制建筑和窗户
         for x, y, w, h in buildings:
             pygame.draw.rect(self.screen, (30, 30, 50), (x, y, w, h))
-            window_color = (60, 50, 30)
+
             for wy in range(y + 20, y + h - 40, 50):
                 for wx in range(x + 15, x + w - 20, 35):
                     if (wx + wy) % 100 < 70:
+                        # 根据位置确定窗户是否亮灯
+                        seed = (wx * 1000 + wy) % 100
+                        if seed < 40:  # 40%的窗户亮着
+                            # 暖色灯光
+                            window_color = (255, 200, 100)
+                            # 绘制窗户光晕
+                            glow = pygame.Surface((30, 40), pygame.SRCALPHA)
+                            pygame.draw.rect(glow, (255, 180, 80, 60), (0, 0, 30, 40))
+                            self.screen.blit(glow, (wx - 5, wy - 5))
+                        else:
+                            window_color = (40, 35, 25)
+
                         pygame.draw.rect(self.screen, window_color, (wx, wy, 20, 30))
+
+        # 绘制街灯
+        lamp_positions = [150, 400, 650, 900]
+        for lx in lamp_positions:
+            # 灯柱
+            pygame.draw.rect(self.screen, (60, 60, 70), (lx - 3, SCREEN_HEIGHT - 230, 6, 80))
+            # 灯头
+            pygame.draw.rect(self.screen, (80, 80, 90), (lx - 10, SCREEN_HEIGHT - 235, 20, 10))
+            # 灯光效果
+            lamp_glow = pygame.Surface((80, 60), pygame.SRCALPHA)
+            pygame.draw.ellipse(lamp_glow, (255, 200, 100, 40), (0, 0, 80, 60))
+            self.screen.blit(lamp_glow, (lx - 40, SCREEN_HEIGHT - 260))
 
         fog = pygame.Surface((SCREEN_WIDTH, 100))
         fog.fill((40, 40, 60))
         fog.set_alpha(50)
         self.screen.blit(fog, (0, SCREEN_HEIGHT - 200))
+
+
+if __name__ == "__main__":
+    game = Game()
+    game.run()

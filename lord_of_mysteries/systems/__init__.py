@@ -5,3 +5,4 @@
 from .inventory import Inventory
 from .potion import PotionSystem
 from .quest import QuestSystem
+from .lighting import LightingSystem, Light, SkillLight, ExplosionLight, TorchLight
