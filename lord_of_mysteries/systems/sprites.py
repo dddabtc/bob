@@ -11,29 +11,37 @@ import os
 # 途径名称到英文文件名的映射（基于img/charactor目录下的实际文件）
 # 22条途径对应22个图片文件
 PATHWAY_FILE_NAMES = {
-    # 根据实际图片文件名映射
-    "愚者": "Seer",                    # 占卜家途径
-    "门": "Marauder",                  # 偷盗者途径
-    "隐秘": "spectator",               # 读心者途径
-    "智慧": "Reader",                  # 鉴定师途径
-    "黑夜": "Darkness",                # 祈密师途径
-    "死亡": "Death",                   # 尸巫途径
-    "猎人": "RedPriest",               # 猎人途径
-    "暴风": "Sailor",                  # 水手途径
-    "战争": "Giant",                   # 战士途径
-    "命运": "Bard",                    # 幸运儿途径
-    "炼药": "Apprentice",              # 炼药师途径
-    "错误": "ABYSS",                   # 罪犯途径
-    "黑皇帝": "BLACK EMPEROR",         # 强权者途径
-    "囚徒": "CHAINED",                 # 囚徒途径（自定义）
-    "刺客": "Hermit",                  # 刺客途径
-    "审判": "JUSTICIAR",               # 仲裁者途径
-    "太阳": "MOON",                    # 拜祭师途径（月亮图暂代太阳）
-    "驭兽": "MOTHER",                  # 驭兽师途径
-    "完美者": "PERFECTIONIST",         # 完美者途径（自定义）
-    "秘祈人": "SECRETS SUPPLICANT",    # 秘祈人途径（自定义）
-    "命运之轮": "THE WHEEL OF FORTUNE", # 命运之轮途径（自定义）
-    "女巫": "Witch",                   # 女巫途径（自定义）
+    # 诡秘之主组
+    "占卜家": "Seer",                    # The Seer
+    "学徒": "Apprentice",                # The Apprentice
+    "偷盗者": "Marauder",                # The Marauder
+    # 上帝组
+    "观众": "spectator",                 # The Spectator
+    "秘祈人": "SECRETS SUPPLICANT",      # The Secrets Supplicant
+    "歌颂者": "Bard",                    # The Bard
+    "水手": "Sailor",                    # The Sailor
+    "阅读者": "Reader",                  # The Reader
+    # 永暗组
+    "不眠者": "Darkness",                # The Sleepless
+    "收尸人": "Death",                   # The Corpse Collector
+    "战士": "Giant",                     # The Warrior
+    # 灾祸组
+    "猎人": "RedPriest",                 # The Hunter
+    "刺客": "Witch",                     # The Assassin
+    # 根源组
+    "耕种者": "MOTHER",                  # The Planter
+    "药师": "MOON",                      # The Apothecary
+    # 无序组
+    "律师": "BLACK EMPEROR",             # The Lawyer
+    "仲裁人": "JUSTICIAR",               # The Arbiter
+    # 知识妖鬼组
+    "通识者": "PERFECTIONIST",           # The Savant
+    "窥秘人": "Hermit",                  # The Mystery Pryer
+    # 恶魔之父组
+    "罪犯": "ABYSS",                     # The Criminal
+    "囚犯": "CHAINED",                   # The Prisoner
+    # 光之钥组
+    "怪物": "THE WHEEL OF FORTUNE",      # The Monster
 }
 
 # 预缩放的常用尺寸
@@ -51,7 +59,7 @@ class SpriteManager:
     def __init__(self):
         self.base_path = None
         self.all_sequence_sprites = {}  # {pathway_name: {sequence: {size_name: sprite}}}
-        self.current_pathway = "愚者"
+        self.current_pathway = "占卜家"
         self.loading_progress = 0
         self.loading_total = 0
         self.loading_current = ""
