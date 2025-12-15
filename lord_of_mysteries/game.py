@@ -939,11 +939,11 @@ class Game:
             heal_amount = 100  # Boss掉大血瓶
             potion_type = "large"
         elif enemy_type == "elite":
-            drop_chance = 0.5  # 精英50%概率
+            drop_chance = 0.7  # 精英70%概率
             heal_amount = 50
             potion_type = "medium"
         else:
-            drop_chance = 0.15  # 普通敌人15%概率
+            drop_chance = 0.35  # 普通敌人35%概率
             heal_amount = 25
             potion_type = "small"
 
@@ -1304,14 +1304,14 @@ class Game:
 
     def _draw_wave_info(self):
         """绘制波次信息"""
-        # 右上角波次信息面板
+        # 右上角波次信息面板（位置靠下避免与掉落通知重叠）
         panel_x = SCREEN_WIDTH - 180
-        panel_y = 15
+        panel_y = 160  # 从160开始，避开顶部掉落通知区域
 
         # 面板背景
-        panel_surface = pygame.Surface((175, 135), pygame.SRCALPHA)
-        panel_surface.fill((20, 20, 30, 180))
-        pygame.draw.rect(panel_surface, (80, 80, 100), (0, 0, 175, 135), 1, border_radius=5)
+        panel_surface = pygame.Surface((175, 140), pygame.SRCALPHA)
+        panel_surface.fill((20, 20, 30, 200))
+        pygame.draw.rect(panel_surface, (100, 80, 60), (0, 0, 175, 140), 2, border_radius=8)
         self.screen.blit(panel_surface, (panel_x - 10, panel_y - 5))
 
         # 波次标题
