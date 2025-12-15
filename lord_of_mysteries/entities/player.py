@@ -290,10 +290,10 @@ class Player:
             return
 
         self.is_attacking = True
-        self.attack_duration = 0.3  # 攻击持续时间
-        self.attack_cooldown = 0.5  # 攻击冷却
+        self.attack_duration = 0.15  # 攻击持续时间（缩短）
+        self.attack_cooldown = 0.2   # 攻击冷却（大幅缩短）
 
-        # 创建四方向攻击判定框
+        # 创建360度攻击判定框
         self.attack_hitbox = self._create_directional_hitbox()
 
     def _create_weapon_projectile(self, proj_data):
@@ -303,32 +303,17 @@ class Player:
         self.weapon_projectiles.append(projectile)
 
     def _create_directional_hitbox(self):
-        """根据朝向创建四方向攻击判定框"""
-        attack_width = 50
-        attack_height = 60
-        offset = self.size // 2 + 20
-
-        if self.facing == "right":
-            attack_x = self.x + offset
-            attack_y = self.y
-            return pygame.Rect(attack_x - 10, attack_y - attack_height // 2, attack_width, attack_height)
-        elif self.facing == "left":
-            attack_x = self.x - offset
-            attack_y = self.y
-            return pygame.Rect(attack_x - attack_width + 10, attack_y - attack_height // 2, attack_width, attack_height)
-        elif self.facing == "up":
-            attack_x = self.x
-            attack_y = self.y - offset
-            return pygame.Rect(attack_x - attack_height // 2, attack_y - attack_width + 10, attack_height, attack_width)
-        elif self.facing == "down":
-            attack_x = self.x
-            attack_y = self.y + offset
-            return pygame.Rect(attack_x - attack_height // 2, attack_y - 10, attack_height, attack_width)
-        else:
-            # 默认向右
-            attack_x = self.x + offset
-            attack_y = self.y
-            return pygame.Rect(attack_x - 10, attack_y - attack_height // 2, attack_width, attack_height)
+        """创建360度环形攻击判定框（以玩家为中心）"""
+        # 攻击范围半径
+        attack_radius = 60
+        # 创建以玩家为中心的正方形判定框
+        hitbox_size = attack_radius * 2
+        return pygame.Rect(
+            self.x - attack_radius,
+            self.y - attack_radius,
+            hitbox_size,
+            hitbox_size
+        )
 
     def _update_attack(self, dt):
         """更新攻击状态"""
@@ -504,45 +489,20 @@ class Player:
         self.projectiles.append(projectile)
 
     def _cast_melee(self, skill):
-        """释放近战技能（支持四方向）"""
+        """释放近战技能（360度环形攻击）"""
         # 强化版普通攻击
         self.is_attacking = True
         self.attack_duration = 0.4
         self.attack_cooldown = 0.3
 
-        # 创建更大的攻击判定框（支持四方向）
-        attack_width = 70
-        attack_height = 80
-        offset = self.size // 2 + 30
-
-        if self.facing == "right":
-            attack_x = self.x + offset
-            attack_y = self.y
-            self.attack_hitbox = pygame.Rect(
-                attack_x - 35, attack_y - attack_height // 2,
-                attack_width, attack_height
-            )
-        elif self.facing == "left":
-            attack_x = self.x - offset
-            attack_y = self.y
-            self.attack_hitbox = pygame.Rect(
-                attack_x - 35, attack_y - attack_height // 2,
-                attack_width, attack_height
-            )
-        elif self.facing == "up":
-            attack_x = self.x
-            attack_y = self.y - offset
-            self.attack_hitbox = pygame.Rect(
-                attack_x - attack_height // 2, attack_y - 35,
-                attack_height, attack_width
-            )
-        else:  # down
-            attack_x = self.x
-            attack_y = self.y + offset
-            self.attack_hitbox = pygame.Rect(
-                attack_x - attack_height // 2, attack_y - 35,
-                attack_height, attack_width
-            )
+        # 创建以玩家为中心的环形攻击判定框
+        attack_radius = 80  # 技能攻击范围更大
+        self.attack_hitbox = pygame.Rect(
+            self.x - attack_radius,
+            self.y - attack_radius,
+            attack_radius * 2,
+            attack_radius * 2
+        )
 
         # 标记为技能攻击，伤害更高
         self.skill_attack_damage = skill.get("damage", self.attack * 2)

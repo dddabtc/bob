@@ -923,8 +923,41 @@ class Game:
                 "lifetime": 10.0  # 10秒后消失
             })
 
+        # 血瓶掉落判定
+        self._try_drop_health_potion(enemy)
+
         # 武器掉落判定
         self._try_drop_weapon(enemy)
+
+    def _try_drop_health_potion(self, enemy):
+        """尝试从敌人掉落血瓶"""
+        # 根据敌人类型决定掉落概率
+        enemy_type = getattr(enemy, 'enemy_type', 'normal')
+
+        if enemy_type == "boss":
+            drop_chance = 1.0  # Boss必掉血瓶
+            heal_amount = 100  # Boss掉大血瓶
+            potion_type = "large"
+        elif enemy_type == "elite":
+            drop_chance = 0.5  # 精英50%概率
+            heal_amount = 50
+            potion_type = "medium"
+        else:
+            drop_chance = 0.15  # 普通敌人15%概率
+            heal_amount = 25
+            potion_type = "small"
+
+        if random.random() < drop_chance:
+            self.drops.append({
+                "x": enemy.x + random.randint(-15, 15),
+                "y": enemy.y + random.randint(-15, 15),
+                "item": "health_potion",
+                "count": 1,
+                "type": "health_potion",
+                "heal_amount": heal_amount,
+                "potion_type": potion_type,
+                "lifetime": 12.0  # 血瓶12秒消失
+            })
 
     def _try_drop_weapon(self, enemy):
         """尝试从敌人掉落武器"""
@@ -1022,7 +1055,41 @@ class Game:
                 item_count = drop["count"]
                 drop_type = drop.get("type", "material")
 
-                if drop_type == "weapon":
+                if drop_type == "health_potion":
+                    # 血瓶拾取 - 直接恢复生命值
+                    heal_amount = drop.get("heal_amount", 25)
+                    potion_type = drop.get("potion_type", "small")
+
+                    # 计算实际恢复量（不超过最大生命值）
+                    actual_heal = min(heal_amount, self.player.max_hp - self.player.hp)
+                    self.player.hp = min(self.player.hp + heal_amount, self.player.max_hp)
+
+                    # 根据血瓶类型选择颜色
+                    if potion_type == "large":
+                        color = (255, 100, 100)  # 大血瓶红色
+                        potion_name = "大血瓶"
+                    elif potion_type == "medium":
+                        color = (255, 150, 150)  # 中血瓶浅红
+                        potion_name = "中血瓶"
+                    else:
+                        color = (255, 180, 180)  # 小血瓶淡红
+                        potion_name = "小血瓶"
+
+                    if actual_heal > 0:
+                        self.floating_texts.append(FloatingText(
+                            self.player.x, self.player.y - 40,
+                            f"+{actual_heal} HP",
+                            (100, 255, 100)
+                        ))
+                        self.drop_notification.add(f"拾取{potion_name} +{actual_heal}HP", color)
+                    else:
+                        self.floating_texts.append(FloatingText(
+                            self.player.x, self.player.y - 40,
+                            "生命已满",
+                            (200, 200, 200)
+                        ))
+
+                elif drop_type == "weapon":
                     # 武器拾取 - 直接装备或存入背包
                     weapon_data = get_weapon_data(item_name)
                     quality = weapon_data.get("quality", "common")
@@ -1132,7 +1199,41 @@ class Game:
             alpha = int(255 * min(1, drop["lifetime"]))
             drop_type = drop.get("type", "material")
 
-            if drop_type == "weapon":
+            if drop_type == "health_potion":
+                # 血瓶掉落 - 红色药水瓶图标
+                potion_type = drop.get("potion_type", "small")
+
+                # 根据血瓶大小决定颜色和尺寸
+                if potion_type == "large":
+                    potion_color = (255, 50, 50)
+                    size_mult = 1.4
+                elif potion_type == "medium":
+                    potion_color = (255, 100, 100)
+                    size_mult = 1.2
+                else:
+                    potion_color = (255, 150, 150)
+                    size_mult = 1.0
+
+                # 绘制红色光晕
+                glow_surface = pygame.Surface((50, 50), pygame.SRCALPHA)
+                glow_alpha = int(80 * min(1, drop["lifetime"]))
+                pygame.draw.circle(glow_surface, (*potion_color, glow_alpha), (25, 25), int(20 * size_mult))
+                pygame.draw.circle(glow_surface, (*potion_color, glow_alpha // 2), (25, 25), int(14 * size_mult))
+                self.screen.blit(glow_surface, (drop["x"] - 25, drop["y"] - 25))
+
+                # 绘制药水瓶图标
+                potion_surface = pygame.Surface((20, 24), pygame.SRCALPHA)
+                # 瓶身（圆角矩形）
+                pygame.draw.rect(potion_surface, (*potion_color, alpha), (4, 8, 12, 14), border_radius=3)
+                # 瓶颈
+                pygame.draw.rect(potion_surface, (200, 200, 200, alpha), (7, 2, 6, 8))
+                # 瓶口
+                pygame.draw.rect(potion_surface, (150, 150, 150, alpha), (6, 0, 8, 3))
+                # 液体高光
+                pygame.draw.line(potion_surface, (255, 200, 200, alpha // 2), (6, 12), (6, 18), 2)
+                self.screen.blit(potion_surface, (drop["x"] - 10, drop["y"] - 12))
+
+            elif drop_type == "weapon":
                 # 武器掉落 - 用品质颜色和剑形图标
                 quality = drop.get("quality", "common")
                 quality_color = QUALITY_COLORS.get(quality, (255, 215, 0))
@@ -1203,15 +1304,77 @@ class Game:
 
     def _draw_wave_info(self):
         """绘制波次信息"""
-        # 右上角显示波次和击杀数
-        wave_text = self.fonts["small"].render(f"波次: {self.current_wave}", True, GOLD)
-        self.screen.blit(wave_text, (SCREEN_WIDTH - 150, 20))
+        # 右上角波次信息面板
+        panel_x = SCREEN_WIDTH - 180
+        panel_y = 15
 
+        # 面板背景
+        panel_surface = pygame.Surface((175, 135), pygame.SRCALPHA)
+        panel_surface.fill((20, 20, 30, 180))
+        pygame.draw.rect(panel_surface, (80, 80, 100), (0, 0, 175, 135), 1, border_radius=5)
+        self.screen.blit(panel_surface, (panel_x - 10, panel_y - 5))
+
+        # 波次标题
+        wave_text = self.fonts["small"].render(f"波次 {self.current_wave}", True, GOLD)
+        self.screen.blit(wave_text, (panel_x, panel_y))
+
+        # 敌人数量进度条
+        enemy_y = panel_y + 30
+        enemy_label = self.fonts["tiny"].render("敌人:", True, GRAY)
+        self.screen.blit(enemy_label, (panel_x, enemy_y))
+
+        # 计算当前波次剩余敌人数
+        enemies_remaining = len(self.enemies) + len(self.wave_spawn_queue)
+
+        # 敌人数量显示
+        enemy_count = self.fonts["tiny"].render(f"{enemies_remaining}", True, CRIMSON if enemies_remaining > 0 else (100, 255, 100))
+        self.screen.blit(enemy_count, (panel_x + 50, enemy_y))
+
+        # 敌人进度条
+        bar_y = enemy_y + 18
+        bar_width = 150
+        bar_height = 8
+        pygame.draw.rect(self.screen, (40, 40, 50), (panel_x, bar_y, bar_width, bar_height), border_radius=3)
+
+        if enemies_remaining > 0:
+            # 显示剩余敌人比例（红色）
+            max_enemies = max(enemies_remaining + 1, 5)
+            enemy_ratio = enemies_remaining / max_enemies
+            enemy_bar_width = int(bar_width * min(1, enemy_ratio))
+            if enemy_bar_width > 0:
+                pygame.draw.rect(self.screen, CRIMSON, (panel_x, bar_y, enemy_bar_width, bar_height), border_radius=3)
+
+        # 击杀统计
+        kill_y = bar_y + 15
         kill_text = self.fonts["tiny"].render(f"击杀: {self.kill_count}", True, WHITE)
-        self.screen.blit(kill_text, (SCREEN_WIDTH - 150, 55))
+        self.screen.blit(kill_text, (panel_x, kill_y))
 
-        enemy_text = self.fonts["tiny"].render(f"敌人: {len(self.enemies)}", True, GRAY)
-        self.screen.blit(enemy_text, (SCREEN_WIDTH - 150, 80))
+        # 经验值统计
+        exp_y = kill_y + 18
+        exp_text = self.fonts["tiny"].render(f"经验: {self.total_exp}", True, (100, 255, 100))
+        self.screen.blit(exp_text, (panel_x, exp_y))
+
+        # 序列晋升进度（基于击杀数的简单计算）
+        seq_y = exp_y + 20
+        if self.player and self.player.sequence > 0:
+            # 每晋升一个序列需要的击杀数（随序列降低难度增加）
+            kills_needed = (10 - self.player.sequence) * 20  # 序列9需要20杀，序列8需要40杀...
+            current_progress = min(self.kill_count, kills_needed)
+            progress_ratio = current_progress / kills_needed if kills_needed > 0 else 0
+
+            seq_label = self.fonts["tiny"].render(f"下一序列:", True, (200, 200, 100))
+            self.screen.blit(seq_label, (panel_x, seq_y))
+
+            # 晋升进度条
+            prog_bar_y = seq_y + 15
+            pygame.draw.rect(self.screen, (40, 40, 50), (panel_x, prog_bar_y, bar_width, bar_height), border_radius=3)
+            prog_width = int(bar_width * progress_ratio)
+            if prog_width > 0:
+                pygame.draw.rect(self.screen, (200, 180, 100), (panel_x, prog_bar_y, prog_width, bar_height), border_radius=3)
+
+            # 进度文字
+            prog_text = self.fonts["tiny"].render(f"{current_progress}/{kills_needed}", True, (180, 180, 100))
+            self.screen.blit(prog_text, (panel_x + bar_width - 45, prog_bar_y - 1))
 
         # 显示即将开始的波次倒计时
         if self.wave_complete and self.wave_timer > 0:
