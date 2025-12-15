@@ -5,6 +5,8 @@
 """
 
 import pygame
+import pygame.surfarray as surfarray
+import numpy as np
 import os
 
 
@@ -44,11 +46,9 @@ PATHWAY_FILE_NAMES = {
     "怪物": "THE WHEEL OF FORTUNE",      # The Monster
 }
 
-# 预缩放的常用尺寸
+# 预缩放的常用尺寸（只保留最常用的两个，其他动态缩放）
 PRESET_SIZES = {
-    "tiny": (50, 65),      # 序列预览小图标
-    "small": (60, 80),     # 游戏中角色
-    "medium": (120, 160),  # 途径详情
+    "small": (60, 80),     # 游戏中角色、途径卡片
     "large": (180, 240),   # 确认界面大图
 }
 
@@ -59,10 +59,12 @@ class SpriteManager:
     def __init__(self):
         self.base_path = None
         self.all_sequence_sprites = {}  # {pathway_name: {sequence: {size_name: sprite}}}
+        self.raw_sprites = {}  # {pathway_name: {sequence: raw_surface}} 存储未处理的原图
         self.current_pathway = "占卜家"
         self.loading_progress = 0
         self.loading_total = 0
         self.loading_current = ""
+        self._trim_cache = {}  # 缓存已裁剪的图片
 
     def init_with_progress(self, base_path, screen):
         """带进度条的初始化"""
@@ -74,11 +76,24 @@ class SpriteManager:
         screen.fill((20, 20, 30))
 
         # 使用系统中文字体
-        try:
-            font_path = "/System/Library/Fonts/PingFang.ttc"
-            font_large = pygame.font.Font(font_path, 36)
-            font_small = pygame.font.Font(font_path, 20)
-        except:
+        font_large = None
+        font_small = None
+        # 尝试多个可能的中文字体路径
+        font_paths = [
+            "/System/Library/Fonts/STHeiti Medium.ttc",
+            "/System/Library/Fonts/STHeiti Light.ttc",
+            "/System/Library/Fonts/Supplemental/Songti.ttc",
+            "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
+        ]
+        for font_path in font_paths:
+            try:
+                font_large = pygame.font.Font(font_path, 36)
+                font_small = pygame.font.Font(font_path, 20)
+                break
+            except:
+                continue
+
+        if font_large is None:
             font_large = pygame.font.Font(None, 48)
             font_small = pygame.font.Font(None, 24)
 
@@ -154,8 +169,82 @@ class SpriteManager:
         self._draw_loading_screen(screen, total, total, "加载完成!")
         pygame.time.wait(300)
 
+    def _trim_background_fast(self, surface):
+        """去除图片的标题栏、边框，只保留角色主体"""
+        try:
+            pixels = surfarray.array3d(surface)
+        except Exception:
+            return surface
+
+        width, height = surface.get_size()
+        row_std = np.std(pixels, axis=(0, 2))
+
+        # 策略：找标题栏后面的主内容区域
+        # 标题栏特征：高标准差（有文字）后跟低标准差（边框线）
+        border_threshold = 10
+        content_threshold = 25
+
+        # 从顶部扫描，跳过标题栏
+        # 找第一个"高标准差->低标准差->高标准差"的转折点
+        min_y = 0
+        in_title = False
+        passed_title_border = False
+
+        for y in range(min(200, height)):  # 标题栏不会超过200像素
+            std = row_std[y]
+            if std > content_threshold and not in_title:
+                in_title = True  # 进入标题区域
+            elif std < border_threshold and in_title:
+                passed_title_border = True  # 经过标题下的边框
+            elif std > content_threshold and passed_title_border:
+                min_y = y  # 这是真正的内容开始
+                break
+
+        # 如果没找到标题栏模式，用简单方法
+        if min_y == 0:
+            for y in range(height):
+                if row_std[y] > border_threshold:
+                    min_y = y
+                    break
+
+        # 底部边界
+        max_y = height
+        for y in range(height - 1, -1, -1):
+            if row_std[y] > border_threshold:
+                max_y = y + 1
+                break
+
+        # 使用内容区域计算左右边界
+        content_pixels = pixels[:, min_y:max_y, :]
+        col_std = np.std(content_pixels, axis=(1, 2))
+
+        min_x = 0
+        for x in range(width):
+            if col_std[x] > border_threshold:
+                min_x = x
+                break
+
+        max_x = width
+        for x in range(width - 1, -1, -1):
+            if col_std[x] > border_threshold:
+                max_x = x + 1
+                break
+
+        # 确保有效
+        if min_x >= max_x or min_y >= max_y:
+            return surface
+
+        # 裁剪
+        content_width = max_x - min_x
+        content_height = max_y - min_y
+
+        trimmed = pygame.Surface((content_width, content_height), pygame.SRCALPHA)
+        trimmed.blit(surface, (0, 0), (min_x, min_y, content_width, content_height))
+
+        return trimmed
+
     def _split_and_prescale(self, pathway_name, sprite_sheet):
-        """分割图集并预缩放到常用尺寸"""
+        """分割图集（延迟裁剪白边，加快启动速度）"""
         sheet_width = sprite_sheet.get_width()
         sheet_height = sprite_sheet.get_height()
 
@@ -169,53 +258,70 @@ class SpriteManager:
             4: (1, 0), 3: (1, 1), 2: (1, 2), 1: (1, 3), 0: (1, 4),
         }
 
+        self.raw_sprites[pathway_name] = {}
         self.all_sequence_sprites[pathway_name] = {}
 
         for sequence, (row, col) in sequence_positions.items():
             x = col * char_width
             y = row * char_height
 
-            # 裁剪原始尺寸
-            original = pygame.Surface((char_width, char_height), pygame.SRCALPHA)
-            original.blit(sprite_sheet, (0, 0), (x, y, char_width, char_height))
+            # 只裁剪原始格子，不做白边处理（延迟到获取时处理）
+            raw = pygame.Surface((char_width, char_height), pygame.SRCALPHA)
+            raw.blit(sprite_sheet, (0, 0), (x, y, char_width, char_height))
 
-            # 预缩放到各种常用尺寸
-            self.all_sequence_sprites[pathway_name][sequence] = {
-                "original": original,
-            }
-            for size_name, size in PRESET_SIZES.items():
-                scaled = pygame.transform.smoothscale(original, size)
-                self.all_sequence_sprites[pathway_name][sequence][size_name] = scaled
+            # 存储原始图片
+            self.raw_sprites[pathway_name][sequence] = raw
+            self.all_sequence_sprites[pathway_name][sequence] = {}
 
     def set_current_pathway(self, pathway_name):
         """设置当前途径"""
         if pathway_name in self.all_sequence_sprites:
             self.current_pathway = pathway_name
 
+    def _get_trimmed_sprite(self, pathway_name, sequence):
+        """获取裁剪白边后的精灵图（带缓存）"""
+        cache_key = (pathway_name, sequence)
+        if cache_key in self._trim_cache:
+            return self._trim_cache[cache_key]
+
+        if pathway_name not in self.raw_sprites:
+            return None
+        if sequence not in self.raw_sprites[pathway_name]:
+            return None
+
+        raw = self.raw_sprites[pathway_name][sequence]
+        trimmed = self._trim_background_fast(raw)
+        self._trim_cache[cache_key] = trimmed
+        return trimmed
+
     def get_character_sprite(self, sequence, size=None):
-        """获取角色图片（优先使用预缩放版本）"""
+        """获取角色图片（延迟裁剪白边，按需缩放）"""
         if self.current_pathway not in self.all_sequence_sprites:
             return None
 
-        pathway_sprites = self.all_sequence_sprites[self.current_pathway]
-        if sequence not in pathway_sprites:
+        if sequence not in self.all_sequence_sprites[self.current_pathway]:
             return None
 
-        sprites = pathway_sprites[sequence]
+        sprites = self.all_sequence_sprites[self.current_pathway][sequence]
+
+        # 检查是否已缓存该尺寸
+        size_key = str(size) if size else "original"
+        if size_key in sprites:
+            return sprites[size_key]
+
+        # 获取裁剪后的原图
+        original = self._get_trimmed_sprite(self.current_pathway, sequence)
+        if original is None:
+            return None
 
         if size is None:
-            return sprites.get("original")
+            sprites["original"] = original
+            return original
 
-        # 查找匹配的预缩放尺寸
-        for size_name, preset_size in PRESET_SIZES.items():
-            if size == preset_size:
-                return sprites.get(size_name)
-
-        # 找不到预设尺寸，动态缩放（较少发生）
-        original = sprites.get("original")
-        if original:
-            return pygame.transform.smoothscale(original, size)
-        return None
+        # 缩放并缓存
+        scaled = pygame.transform.smoothscale(original, size)
+        sprites[size_key] = scaled
+        return scaled
 
     def get_character_portrait(self, sequence, size=(80, 100)):
         """获取角色头像"""
