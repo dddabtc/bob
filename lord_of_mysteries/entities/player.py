@@ -39,8 +39,10 @@ class Player:
         self.sprite_size = (60, 80)  # 游戏中显示的大小
         self._load_sprite()
 
-        # 方向 (1=右, -1=左)
-        self.facing = 1
+        # 方向 (四方向: "right", "left", "up", "down")
+        self.facing = "right"
+        self.facing_x = 1  # 水平方向 (1=右, -1=左, 0=无)
+        self.facing_y = 0  # 垂直方向 (1=下, -1=上, 0=无)
 
         # 状态
         self.is_attacking = False
@@ -73,6 +75,25 @@ class Player:
 
         # 投射物列表
         self.projectiles = []
+
+        # 武器系统
+        self.weapon_manager = None
+        self.weapon_attack_bonus = 0
+        self.weapon_crit_rate = 0
+        self.weapon_crit_damage = 0
+        self.weapon_spirit_bonus = 0
+        self.weapon_defense_bonus = 0
+        self.weapon_projectiles = []  # 武器投射物单独管理
+        self._init_weapon_system()
+
+    def _init_weapon_system(self):
+        """初始化武器系统"""
+        try:
+            from systems.weapon import WeaponManager
+            self.weapon_manager = WeaponManager(self)
+        except Exception as e:
+            print(f"初始化武器系统失败: {e}")
+            self.weapon_manager = None
 
     def _init_skills(self):
         """初始化技能"""
@@ -123,6 +144,13 @@ class Player:
 
         # 更新投射物
         self._update_projectiles(dt)
+
+        # 更新武器系统
+        if self.weapon_manager:
+            self.weapon_manager.update(dt)
+
+        # 更新武器投射物
+        self._update_weapon_projectiles(dt)
 
         # 更新动画
         self._update_animation(dt)
@@ -177,10 +205,22 @@ class Player:
             dy += 1
         if keys[pygame.K_a] or keys[pygame.K_LEFT]:
             dx -= 1
-            self.facing = -1
         if keys[pygame.K_d] or keys[pygame.K_RIGHT]:
             dx += 1
-            self.facing = 1
+
+        # 更新朝向（四方向）
+        if dx != 0 or dy != 0:
+            # 优先使用最后按下的方向
+            if abs(dx) >= abs(dy):
+                # 水平方向优先
+                self.facing_x = dx
+                self.facing_y = 0
+                self.facing = "right" if dx > 0 else "left"
+            else:
+                # 垂直方向优先
+                self.facing_x = 0
+                self.facing_y = dy
+                self.facing = "down" if dy > 0 else "up"
 
         # 归一化对角线移动
         if dx != 0 and dy != 0:
@@ -194,7 +234,7 @@ class Player:
         """处理事件输入"""
         for event in events:
             if event.type == pygame.KEYDOWN:
-                # 普通攻击 - J键
+                # 普通攻击 - J键或鼠标左键
                 if event.key == pygame.K_j:
                     self.start_attack()
 
@@ -207,22 +247,88 @@ class Player:
                     skill_index = event.key - pygame.K_1
                     self.use_skill(skill_index)
 
-    def start_attack(self):
+                # R键装填（左轮专用）
+                elif event.key == pygame.K_r:
+                    if self.weapon_manager:
+                        self.weapon_manager.start_reload()
+
+            # 鼠标攻击（用于远程武器瞄准）
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1:  # 左键
+                    self.start_attack(pygame.mouse.get_pos())
+
+    def start_attack(self, target_pos=None):
         """开始攻击"""
-        if self.attack_cooldown > 0 or self.is_attacking or self.is_dodging:
+        if self.is_attacking or self.is_dodging:
+            return
+
+        # 使用武器系统攻击
+        if self.weapon_manager:
+            if not self.weapon_manager.can_attack():
+                return
+
+            result = self.weapon_manager.start_attack(target_pos)
+            if result:
+                self.is_attacking = True
+                self.attack_duration = 0.3
+
+                # 处理攻击结果
+                if isinstance(result, dict):
+                    if result["type"] == "melee":
+                        self.attack_hitbox = result["hitbox"]
+                        self._current_attack_data = result
+                    elif result["type"] == "projectile":
+                        self._create_weapon_projectile(result)
+                elif isinstance(result, list):
+                    # 多个投射物
+                    for proj_data in result:
+                        self._create_weapon_projectile(proj_data)
+                return
+
+        # 备用：无武器时的基础攻击
+        if self.attack_cooldown > 0:
             return
 
         self.is_attacking = True
         self.attack_duration = 0.3  # 攻击持续时间
         self.attack_cooldown = 0.5  # 攻击冷却
 
-        # 创建攻击判定框
-        attack_x = self.x + self.facing * (self.size // 2 + 20)
-        attack_y = self.y
-        self.attack_hitbox = pygame.Rect(
-            attack_x - 25, attack_y - 30,
-            50, 60
-        )
+        # 创建四方向攻击判定框
+        self.attack_hitbox = self._create_directional_hitbox()
+
+    def _create_weapon_projectile(self, proj_data):
+        """创建武器投射物"""
+        from systems.weapon import WeaponProjectile
+        projectile = WeaponProjectile(proj_data)
+        self.weapon_projectiles.append(projectile)
+
+    def _create_directional_hitbox(self):
+        """根据朝向创建四方向攻击判定框"""
+        attack_width = 50
+        attack_height = 60
+        offset = self.size // 2 + 20
+
+        if self.facing == "right":
+            attack_x = self.x + offset
+            attack_y = self.y
+            return pygame.Rect(attack_x - 10, attack_y - attack_height // 2, attack_width, attack_height)
+        elif self.facing == "left":
+            attack_x = self.x - offset
+            attack_y = self.y
+            return pygame.Rect(attack_x - attack_width + 10, attack_y - attack_height // 2, attack_width, attack_height)
+        elif self.facing == "up":
+            attack_x = self.x
+            attack_y = self.y - offset
+            return pygame.Rect(attack_x - attack_height // 2, attack_y - attack_width + 10, attack_height, attack_width)
+        elif self.facing == "down":
+            attack_x = self.x
+            attack_y = self.y + offset
+            return pygame.Rect(attack_x - attack_height // 2, attack_y - 10, attack_height, attack_width)
+        else:
+            # 默认向右
+            attack_x = self.x + offset
+            attack_y = self.y
+            return pygame.Rect(attack_x - 10, attack_y - attack_height // 2, attack_width, attack_height)
 
     def _update_attack(self, dt):
         """更新攻击状态"""
@@ -250,7 +356,11 @@ class Player:
 
         # 如果没有方向输入，向面朝方向闪避
         if dx == 0 and dy == 0:
-            dx = self.facing
+            dx = self.facing_x
+            dy = self.facing_y
+            # 如果朝向也是0，默认向右
+            if dx == 0 and dy == 0:
+                dx = 1
 
         # 归一化
         length = math.sqrt(dx * dx + dy * dy)
@@ -310,12 +420,18 @@ class Player:
         return True
 
     def _cast_projectile(self, skill):
-        """释放投射物技能"""
+        """释放投射物技能（支持四方向）"""
+        # 根据朝向计算投射物方向
+        offset_x = self.facing_x * 30
+        offset_y = self.facing_y * 30
+        vel_x = self.facing_x * 12
+        vel_y = self.facing_y * 12
+
         projectile = {
-            "x": self.x + self.facing * 30,
-            "y": self.y,
-            "vx": self.facing * 12,
-            "vy": 0,
+            "x": self.x + offset_x,
+            "y": self.y + offset_y,
+            "vx": vel_x,
+            "vy": vel_y,
             "damage": skill.get("damage", 20),
             "size": 10,
             "lifetime": 2.0,
@@ -346,10 +462,11 @@ class Player:
         self.hp = min(self.max_hp, self.hp + heal_amount)
 
     def _cast_dash(self, skill):
-        """释放冲刺技能"""
+        """释放冲刺技能（支持四方向）"""
         # 快速位移
         dash_distance = 100
-        self.x += self.facing * dash_distance
+        self.x += self.facing_x * dash_distance
+        self.y += self.facing_y * dash_distance
 
         # 如果技能有伤害，创建伤害区域
         if "damage" in skill:
@@ -367,11 +484,15 @@ class Player:
             self.projectiles.append(projectile)
 
     def _cast_aoe(self, skill):
-        """释放范围技能"""
+        """释放范围技能（支持四方向）"""
+        # 根据朝向计算AOE位置
+        offset_x = self.facing_x * 80
+        offset_y = self.facing_y * 80
+
         # 创建一个大范围的投射物
         projectile = {
-            "x": self.x + self.facing * 80,
-            "y": self.y,
+            "x": self.x + offset_x,
+            "y": self.y + offset_y,
             "vx": 0,
             "vy": 0,
             "damage": skill.get("damage", 40),
@@ -383,19 +504,46 @@ class Player:
         self.projectiles.append(projectile)
 
     def _cast_melee(self, skill):
-        """释放近战技能"""
+        """释放近战技能（支持四方向）"""
         # 强化版普通攻击
         self.is_attacking = True
         self.attack_duration = 0.4
         self.attack_cooldown = 0.3
 
-        # 创建更大的攻击判定框
-        attack_x = self.x + self.facing * (self.size // 2 + 30)
-        attack_y = self.y
-        self.attack_hitbox = pygame.Rect(
-            attack_x - 35, attack_y - 40,
-            70, 80
-        )
+        # 创建更大的攻击判定框（支持四方向）
+        attack_width = 70
+        attack_height = 80
+        offset = self.size // 2 + 30
+
+        if self.facing == "right":
+            attack_x = self.x + offset
+            attack_y = self.y
+            self.attack_hitbox = pygame.Rect(
+                attack_x - 35, attack_y - attack_height // 2,
+                attack_width, attack_height
+            )
+        elif self.facing == "left":
+            attack_x = self.x - offset
+            attack_y = self.y
+            self.attack_hitbox = pygame.Rect(
+                attack_x - 35, attack_y - attack_height // 2,
+                attack_width, attack_height
+            )
+        elif self.facing == "up":
+            attack_x = self.x
+            attack_y = self.y - offset
+            self.attack_hitbox = pygame.Rect(
+                attack_x - attack_height // 2, attack_y - 35,
+                attack_height, attack_width
+            )
+        else:  # down
+            attack_x = self.x
+            attack_y = self.y + offset
+            self.attack_hitbox = pygame.Rect(
+                attack_x - attack_height // 2, attack_y - 35,
+                attack_height, attack_width
+            )
+
         # 标记为技能攻击，伤害更高
         self.skill_attack_damage = skill.get("damage", self.attack * 2)
 
@@ -413,6 +561,13 @@ class Player:
                 self.projectiles.remove(proj)
             elif proj["y"] < 0 or proj["y"] > SCREEN_HEIGHT:
                 self.projectiles.remove(proj)
+
+    def _update_weapon_projectiles(self, dt, enemies=None):
+        """更新武器投射物"""
+        for proj in self.weapon_projectiles[:]:
+            proj.update(dt, enemies)
+            if not proj.active:
+                self.weapon_projectiles.remove(proj)
 
     def _update_animation(self, dt):
         """更新动画"""
@@ -455,7 +610,34 @@ class Player:
             damage = self.skill_attack_damage
             self.skill_attack_damage = None
             return damage
-        return self.attack
+
+        # 使用武器系统的伤害
+        if self.weapon_manager and hasattr(self, '_current_attack_data') and self._current_attack_data is not None:
+            attack_data = self._current_attack_data
+            self._current_attack_data = None
+            return attack_data.get("damage", self.attack), attack_data.get("is_crit", False), attack_data.get("effects", {})
+
+        return self.attack + self.weapon_attack_bonus
+
+    def get_total_attack(self):
+        """获取总攻击力（包含武器加成）"""
+        return self.attack + self.weapon_attack_bonus
+
+    def get_total_defense(self):
+        """获取总防御力（包含武器加成）"""
+        return self.defense + self.weapon_defense_bonus
+
+    def equip_weapon(self, weapon_name):
+        """装备武器"""
+        if self.weapon_manager:
+            return self.weapon_manager.equip_weapon(weapon_name)
+        return False
+
+    def get_equipped_weapon(self):
+        """获取当前装备的武器名"""
+        if self.weapon_manager:
+            return self.weapon_manager.equipped_weapon
+        return None
 
     def draw(self, screen, fonts):
         """绘制玩家"""
@@ -472,8 +654,8 @@ class Player:
             # 创建临时surface用于应用透明度和翻转
             sprite_to_draw = self.sprite.copy()
 
-            # 根据面朝方向翻转
-            if self.facing == -1:
+            # 根据面朝方向翻转（左右方向）
+            if self.facing == "left":
                 sprite_to_draw = pygame.transform.flip(sprite_to_draw, True, False)
 
             # 应用透明度
@@ -515,8 +697,21 @@ class Player:
                 2
             )
 
-            indicator_x = self.size // 2 + self.facing * 10
-            indicator_y = self.size // 2
+            # 方向指示器（支持四方向）
+            center = self.size // 2
+            if self.facing == "right":
+                indicator_x = center + 10
+                indicator_y = center
+            elif self.facing == "left":
+                indicator_x = center - 10
+                indicator_y = center
+            elif self.facing == "up":
+                indicator_x = center
+                indicator_y = center - 10
+            else:  # down
+                indicator_x = center
+                indicator_y = center + 10
+
             pygame.draw.circle(
                 player_surface,
                 (255, 255, 255, alpha),
@@ -555,6 +750,10 @@ class Player:
                 # 普通投射物
                 pygame.draw.circle(screen, proj["color"], (int(proj["x"]), int(proj["y"])), proj["size"])
                 pygame.draw.circle(screen, WHITE, (int(proj["x"]), int(proj["y"])), proj["size"], 2)
+
+        # 绘制武器投射物
+        for proj in self.weapon_projectiles:
+            proj.draw(screen)
 
         # 绘制名称
         name_text = fonts["tiny"].render(self.name, True, WHITE)

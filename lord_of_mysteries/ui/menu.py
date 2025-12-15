@@ -51,6 +51,7 @@ class MainMenu:
         self.screen = screen
         self.fonts = fonts
         self.buttons = []
+        self.has_continue = False  # 是否有存档可继续
         self._create_buttons()
 
         # 装饰元素
@@ -61,14 +62,14 @@ class MainMenu:
         """创建菜单按钮"""
         button_width = 280
         button_height = 60
-        start_y = 350
-        gap = 80
+        start_y = 320
+        gap = 70
         center_x = SCREEN_WIDTH // 2 - button_width // 2
 
         button_data = [
-            ("开始游戏", "start"),
+            ("开始新游戏", "start"),
             ("继续游戏", "continue"),
-            ("游戏设置", "settings"),
+            ("读取存档", "load"),
             ("退出游戏", "quit")
         ]
 
@@ -84,6 +85,10 @@ class MainMenu:
     def update(self, mouse_pos, mouse_clicked):
         """更新菜单状态，返回点击的按钮动作"""
         for btn in self.buttons:
+            # 继续游戏按钮需要有存档才能点击
+            if btn.action == "continue" and not self.has_continue:
+                btn.is_hovered = False
+                continue
             if btn.update(mouse_pos, mouse_clicked):
                 return btn.action
         return None
@@ -108,7 +113,11 @@ class MainMenu:
 
         # 绘制按钮
         for btn in self.buttons:
-            btn.draw(self.screen)
+            # 继续游戏按钮没有存档时显示禁用状态
+            if btn.action == "continue" and not self.has_continue:
+                self._draw_disabled_button(btn)
+            else:
+                btn.draw(self.screen)
 
         # 底部提示
         hint = self.fonts["tiny"].render(
@@ -116,6 +125,16 @@ class MainMenu:
         )
         hint_rect = hint.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 50))
         self.screen.blit(hint, hint_rect)
+
+    def _draw_disabled_button(self, btn):
+        """绘制禁用状态的按钮"""
+        # 暗色背景
+        pygame.draw.rect(self.screen, (40, 40, 50), btn.rect, border_radius=8)
+        pygame.draw.rect(self.screen, (80, 80, 90), btn.rect, 2, border_radius=8)
+        # 灰色文字
+        text_surface = btn.font.render(btn.text, True, (80, 80, 80))
+        text_rect = text_surface.get_rect(center=btn.rect.center)
+        self.screen.blit(text_surface, text_rect)
 
     def _draw_background(self):
         """绘制装饰背景"""
@@ -166,13 +185,14 @@ class PauseMenu:
         """创建暂停菜单按钮"""
         button_width = 200
         button_height = 50
-        start_y = 300
-        gap = 70
+        start_y = 260
+        gap = 60
         center_x = SCREEN_WIDTH // 2 - button_width // 2
 
         button_data = [
             ("继续游戏", "resume"),
-            ("游戏设置", "settings"),
+            ("保存游戏", "save"),
+            ("读取存档", "load"),
             ("返回主菜单", "main_menu"),
             ("退出游戏", "quit")
         ]

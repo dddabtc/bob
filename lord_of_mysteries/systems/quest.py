@@ -3,11 +3,13 @@
 """
 
 from data.quests import (
-    ALL_QUESTS, MAIN_QUESTS, SIDE_QUESTS, DAILY_QUESTS,
+    ALL_QUESTS, MAIN_QUESTS, SIDE_QUESTS, DAILY_QUESTS, WEEKLY_QUESTS,
     QUEST_STATUS_LOCKED, QUEST_STATUS_AVAILABLE, QUEST_STATUS_ACTIVE,
     QUEST_STATUS_COMPLETE, QUEST_STATUS_FINISHED,
     OBJECTIVE_KILL, OBJECTIVE_COLLECT, OBJECTIVE_REACH_WAVE,
     OBJECTIVE_CRAFT, OBJECTIVE_TALK, OBJECTIVE_ADVANCE,
+    OBJECTIVE_BOSS, OBJECTIVE_SURVIVE, OBJECTIVE_NO_DAMAGE,
+    OBJECTIVE_COMBO, OBJECTIVE_EQUIP, OBJECTIVE_GOLD,
     get_quest_data, get_initial_quests
 )
 
@@ -223,6 +225,83 @@ class QuestSystem:
     def on_sequence_advanced(self, new_sequence):
         """晋升序列时调用"""
         return self.update_objective(OBJECTIVE_ADVANCE, new_sequence)
+
+    def on_boss_killed(self, boss_name):
+        """Boss被击杀时调用"""
+        return self.update_objective(OBJECTIVE_BOSS, boss_name)
+
+    def on_combo_achieved(self, combo_count):
+        """达成连击时调用"""
+        # 检查是否达到目标连击数
+        updated = []
+        for quest_id in self.active_quests:
+            quest = get_quest_data(quest_id)
+            if not quest:
+                continue
+            for i, obj in enumerate(quest.get("objectives", [])):
+                if obj["type"] == OBJECTIVE_COMBO:
+                    target_combo = obj.get("target", 0)
+                    if combo_count >= target_combo:
+                        progress = self.quest_progress.get(quest_id, {})
+                        if progress.get(i, 0) < 1:
+                            progress[i] = 1
+                            self.quest_progress[quest_id] = progress
+                            updated.append((quest_id, obj["desc"], 1, 1))
+                            if self._check_quest_complete(quest_id):
+                                self.quest_status[quest_id] = QUEST_STATUS_COMPLETE
+        return updated
+
+    def on_weapon_equipped(self, weapon_name, weapon_quality):
+        """装备武器时调用"""
+        updated = self.update_objective(OBJECTIVE_EQUIP, "any")
+        return updated
+
+    def on_weapon_collected(self, weapon_name, weapon_quality):
+        """获得武器时调用"""
+        # 检查稀有武器收集
+        if weapon_quality == "rare":
+            self.update_objective(OBJECTIVE_COLLECT, "weapon_rare")
+        elif weapon_quality == "epic":
+            self.update_objective(OBJECTIVE_COLLECT, "weapon_epic")
+        elif weapon_quality == "legendary":
+            self.update_objective(OBJECTIVE_COLLECT, "weapon_legendary")
+
+    def on_gold_earned(self, amount):
+        """获得金币时调用"""
+        return self.update_objective(OBJECTIVE_GOLD, "any", amount)
+
+    def on_no_damage_kill(self, kill_count):
+        """无伤击杀时调用"""
+        updated = []
+        for quest_id in self.active_quests:
+            quest = get_quest_data(quest_id)
+            if not quest:
+                continue
+            for i, obj in enumerate(quest.get("objectives", [])):
+                if obj["type"] == OBJECTIVE_NO_DAMAGE:
+                    target_kills = obj.get("target", 0)
+                    progress = self.quest_progress.get(quest_id, {})
+                    current = progress.get(i, 0)
+                    if kill_count >= target_kills and current < 1:
+                        progress[i] = 1
+                        self.quest_progress[quest_id] = progress
+                        updated.append((quest_id, obj["desc"], 1, 1))
+                        if self._check_quest_complete(quest_id):
+                            self.quest_status[quest_id] = QUEST_STATUS_COMPLETE
+        return updated
+
+    def reset_no_damage_progress(self):
+        """受伤时重置无伤挑战进度"""
+        for quest_id in self.active_quests:
+            quest = get_quest_data(quest_id)
+            if not quest:
+                continue
+            for i, obj in enumerate(quest.get("objectives", [])):
+                if obj["type"] == OBJECTIVE_NO_DAMAGE:
+                    progress = self.quest_progress.get(quest_id, {})
+                    if progress.get(i, 0) < 1:  # 只重置未完成的
+                        # 这里不需要重置，因为无伤挑战是累计计数
+                        pass
 
     def get_pending_dialogue(self):
         """获取待播放的对话"""

@@ -3,6 +3,7 @@
 """
 
 from data.items import MATERIALS, CONSUMABLES, QUALITY_COLORS, get_material_info
+from data.weapons import WEAPONS, get_weapon_data
 
 
 class Inventory:
@@ -12,6 +13,8 @@ class Inventory:
         self.max_slots = max_slots
         self.materials = {}  # 材料: {名称: 数量}
         self.consumables = {}  # 消耗品: {名称: 数量}
+        self.weapons = []  # 武器列表（存储武器名称）
+        self.max_weapons = 20  # 最多持有武器数
         self.gold = 0  # 金币
 
     def add_material(self, name, count=1):
@@ -153,6 +156,7 @@ class Inventory:
         return {
             "materials": dict(self.materials),
             "consumables": dict(self.consumables),
+            "weapons": list(self.weapons),
             "gold": self.gold,
         }
 
@@ -160,4 +164,52 @@ class Inventory:
         """从字典恢复（用于读档）"""
         self.materials = data.get("materials", {})
         self.consumables = data.get("consumables", {})
+        self.weapons = data.get("weapons", [])
         self.gold = data.get("gold", 0)
+
+    # ==================== 武器管理 ====================
+
+    def add_weapon(self, weapon_name):
+        """添加武器到背包"""
+        if weapon_name not in WEAPONS:
+            return False, f"未知武器: {weapon_name}"
+
+        if len(self.weapons) >= self.max_weapons:
+            return False, "武器栏已满"
+
+        self.weapons.append(weapon_name)
+        return True, f"获得武器: {weapon_name}"
+
+    def remove_weapon(self, weapon_name):
+        """从背包移除武器"""
+        if weapon_name in self.weapons:
+            self.weapons.remove(weapon_name)
+            return True, f"移除武器: {weapon_name}"
+        return False, "没有该武器"
+
+    def has_weapon(self, weapon_name):
+        """检查是否拥有武器"""
+        return weapon_name in self.weapons
+
+    def get_all_weapons(self):
+        """获取所有武器列表（带详情）"""
+        result = []
+        for weapon_name in self.weapons:
+            weapon_data = get_weapon_data(weapon_name)
+            if weapon_data:
+                result.append({
+                    "name": weapon_name,
+                    "type": weapon_data.get("type"),
+                    "quality": weapon_data.get("quality", "common"),
+                    "attack": weapon_data.get("attack", 0),
+                    "special": weapon_data.get("special", ""),
+                    "desc": weapon_data.get("desc", ""),
+                })
+        # 按品质排序
+        quality_order = {"legendary": 0, "epic": 1, "rare": 2, "uncommon": 3, "common": 4}
+        result.sort(key=lambda x: quality_order.get(x["quality"], 5))
+        return result
+
+    def get_weapons_count(self):
+        """获取武器数量"""
+        return len(self.weapons)
