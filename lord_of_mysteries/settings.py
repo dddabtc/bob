@@ -60,3 +60,6 @@ FONT_SIZES = {
     "small": 24,
     "tiny": 18
 }
+
+# 语言设置
+DEFAULT_LANGUAGE = "zh_CN"  # 默认语言: zh_CN (简体中文), en_US (English)

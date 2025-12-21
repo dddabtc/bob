@@ -4,6 +4,7 @@
 
 import pygame
 from settings import *
+from systems.language import t
 
 
 class Button:
@@ -66,20 +67,23 @@ class MainMenu:
         gap = 70
         center_x = SCREEN_WIDTH // 2 - button_width // 2
 
+        # 使用语言键而不是硬编码文本
         button_data = [
-            ("开始新游戏", "start"),
-            ("继续游戏", "continue"),
-            ("读取存档", "load"),
-            ("退出游戏", "quit")
+            ("menu_new_game", "start"),
+            ("menu_continue", "continue"),
+            ("menu_load_game", "load"),
+            ("menu_settings", "settings"),
+            ("menu_quit", "quit")
         ]
 
-        for i, (text, action) in enumerate(button_data):
+        for i, (text_key, action) in enumerate(button_data):
             btn = Button(
                 center_x, start_y + i * gap,
                 button_width, button_height,
-                text, self.fonts["medium"]
+                text_key, self.fonts["medium"]
             )
             btn.action = action
+            btn.text_key = text_key  # 保存语言键
             self.buttons.append(btn)
 
     def update(self, mouse_pos, mouse_clicked):
@@ -106,13 +110,17 @@ class MainMenu:
 
         # 副标题
         subtitle = self.fonts["small"].render(
-            "— 实时动作RPG —", True, GRAY
+            "— " + t("menu_subtitle") + " —", True, GRAY
         )
         subtitle_rect = subtitle.get_rect(center=(SCREEN_WIDTH // 2, 280))
         self.screen.blit(subtitle, subtitle_rect)
 
-        # 绘制按钮
+        # 绘制按钮（动态翻译文本）
         for btn in self.buttons:
+            # 更新按钮文本为当前语言
+            if hasattr(btn, 'text_key'):
+                btn.text = t(btn.text_key)
+
             # 继续游戏按钮没有存档时显示禁用状态
             if btn.action == "continue" and not self.has_continue:
                 self._draw_disabled_button(btn)
@@ -185,25 +193,27 @@ class PauseMenu:
         """创建暂停菜单按钮"""
         button_width = 200
         button_height = 50
-        start_y = 260
-        gap = 60
+        start_y = 220
+        gap = 55
         center_x = SCREEN_WIDTH // 2 - button_width // 2
 
         button_data = [
-            ("继续游戏", "resume"),
-            ("保存游戏", "save"),
-            ("读取存档", "load"),
-            ("返回主菜单", "main_menu"),
-            ("退出游戏", "quit")
+            ("pause_resume", "resume"),
+            ("pause_save", "save"),
+            ("pause_load", "load"),
+            ("pause_settings", "settings"),
+            ("pause_main_menu", "main_menu"),
+            ("pause_quit", "quit")
         ]
 
-        for i, (text, action) in enumerate(button_data):
+        for i, (text_key, action) in enumerate(button_data):
             btn = Button(
                 center_x, start_y + i * gap,
                 button_width, button_height,
-                text, self.fonts["small"]
+                text_key, self.fonts["small"]
             )
             btn.action = action
+            btn.text_key = text_key
             self.buttons.append(btn)
 
     def update(self, mouse_pos, mouse_clicked):
@@ -222,10 +232,12 @@ class PauseMenu:
         self.screen.blit(overlay, (0, 0))
 
         # 暂停标题
-        title = self.fonts["large"].render("游戏暂停", True, GOLD)
-        title_rect = title.get_rect(center=(SCREEN_WIDTH // 2, 200))
+        title = self.fonts["large"].render(t("pause_title"), True, GOLD)
+        title_rect = title.get_rect(center=(SCREEN_WIDTH // 2, 160))
         self.screen.blit(title, title_rect)
 
-        # 绘制按钮
+        # 绘制按钮（动态翻译文本）
         for btn in self.buttons:
+            if hasattr(btn, 'text_key'):
+                btn.text = t(btn.text_key)
             btn.draw(self.screen)

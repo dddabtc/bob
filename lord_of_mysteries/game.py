@@ -27,6 +27,8 @@ from systems.lighting import LightingSystem, Light, TorchLight
 from systems.sprites import init_sprites, set_pathway
 from systems.save_system import SaveSystem, collect_game_data, apply_save_data
 from ui.save_ui import SaveLoadUI, ContinueButton
+from ui.settings_ui import SettingsUI
+from systems.language import t, get_lang
 
 
 class Game:
@@ -62,6 +64,10 @@ class Game:
         self.boss_ui = BossUI(self.fonts)
         self.weapon_ui = WeaponUI(self.screen, self.fonts)
         self.weapon_hud = WeaponHUD(self.fonts)
+        self.settings_ui = SettingsUI(self.screen, self.fonts)
+
+        # 语言系统
+        self.lang_system = get_lang()
 
         # 存档系统
         import os
@@ -218,8 +224,19 @@ class Game:
                 # 打开读档界面
                 self.save_ui.show("load")
                 self.state = "save_load"
+            elif action == "settings":
+                # 打开设置界面
+                self.settings_ui.show()
+                self.state = "settings"
             elif action == "quit":
                 self.running = False
+
+        elif self.state == "settings":
+            # 设置界面
+            for event in self.events:
+                result = self.settings_ui.handle_event(event)
+                if result == "close":
+                    self.state = GameState.MENU if not self.player else GameState.PAUSED
 
         elif self.state == "save_load":
             # 存档/读档界面
@@ -235,7 +252,7 @@ class Game:
                         self.save_ui._refresh_saves()
                         self.floating_texts.append(FloatingText(
                             SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2,
-                            "游戏已保存!", GOLD
+                            t("save_success"), GOLD
                         ))
                     elif action == "load":
                         slot = result[1]
@@ -273,6 +290,10 @@ class Game:
                 # 打开读档界面
                 self.save_ui.show("load")
                 self.state = "save_load"
+            elif action == "settings":
+                # 打开设置界面
+                self.settings_ui.show()
+                self.state = "settings"
             elif action == "main_menu":
                 # 自动存档后返回主菜单
                 self._auto_save()
@@ -1198,6 +1219,14 @@ class Game:
             else:
                 self.screen.fill(MIDNIGHT_BLUE)
             self.save_ui.draw()
+
+        elif self.state == "settings":
+            # 设置界面
+            if self.player:
+                self._draw_playing()
+            else:
+                self.screen.fill(MIDNIGHT_BLUE)
+            self.settings_ui.draw()
 
         elif self.state == GameState.GAME_OVER:
             self._draw_playing()
