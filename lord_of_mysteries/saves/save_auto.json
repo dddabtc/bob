@@ -1,7 +1,7 @@
 {
   "version": "1.0",
-  "timestamp": 1766355203.2255502,
-  "datetime": "2025-12-21 18:13:23",
+  "timestamp": 1766359937.051336,
+  "datetime": "2025-12-21 19:32:17",
   "data": {
     "player": {
       "name": "占卜家",
@@ -113,7 +113,7 @@
     },
     "wave": 1,
     "score": 0,
-    "playtime": 734.407000000571,
+    "playtime": 737.2370000005794,
     "kills": 0,
     "stats": {
       "total_kills": 0,
