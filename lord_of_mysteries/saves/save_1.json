@@ -1,10 +1,10 @@
 {
   "version": "1.0",
-  "timestamp": 1766355203.2255502,
-  "datetime": "2025-12-21 18:13:23",
+  "timestamp": 1766354957.044123,
+  "datetime": "2025-12-21 18:09:17",
   "data": {
     "player": {
-      "name": "占卜家",
+      "name": "无面人",
       "pathway": "占卜家",
       "sequence": 6,
       "level": 1,
@@ -113,7 +113,7 @@
     },
     "wave": 1,
     "score": 0,
-    "playtime": 734.407000000571,
+    "playtime": 723.528000000539,
     "kills": 0,
     "stats": {
       "total_kills": 0,

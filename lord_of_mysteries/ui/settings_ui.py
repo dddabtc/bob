@@ -3,8 +3,11 @@
 """
 
 import pygame
+import json
+import os
 from settings import *
 from systems.language import t, get_lang
+from systems.audio import get_audio
 
 
 class SettingsUI:
@@ -21,12 +24,26 @@ class SettingsUI:
         self.x = (SCREEN_WIDTH - self.width) // 2
         self.y = (SCREEN_HEIGHT - self.height) // 2
 
+        # 系统引用
+        self.lang_system = get_lang()
+        self.audio_system = get_audio()
+
+        # 配置文件路径
+        self.config_path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            "saves",
+            "settings.json"
+        )
+
+        # 加载设置
+        self._load_settings()
+
         # 设置选项
         self.options = [
-            {"key": "language", "type": "toggle"},
-            {"key": "sound", "type": "toggle", "value": True},
-            {"key": "music", "type": "toggle", "value": True},
-            {"key": "fullscreen", "type": "toggle", "value": False},
+            {"key": "language", "type": "language"},
+            {"key": "sound", "type": "toggle"},
+            {"key": "music", "type": "toggle"},
+            {"key": "fullscreen", "type": "toggle"},
         ]
 
         self.selected_index = 0
@@ -45,13 +62,49 @@ class SettingsUI:
         self.hover_back = False
         self.hover_apply = False
 
-        # 语言系统
-        self.lang_system = get_lang()
+        # 全屏状态（需要Game类回调）
+        self.fullscreen = False
+        self.fullscreen_callback = None
+
+    def _load_settings(self):
+        """加载设置"""
+        try:
+            if os.path.exists(self.config_path):
+                with open(self.config_path, 'r', encoding='utf-8') as f:
+                    settings = json.load(f)
+                    self.fullscreen = settings.get("fullscreen", False)
+        except (json.JSONDecodeError, IOError):
+            self.fullscreen = False
+
+    def _save_settings(self):
+        """保存设置"""
+        try:
+            os.makedirs(os.path.dirname(self.config_path), exist_ok=True)
+
+            settings = {}
+            if os.path.exists(self.config_path):
+                try:
+                    with open(self.config_path, 'r', encoding='utf-8') as f:
+                        settings = json.load(f)
+                except (json.JSONDecodeError, IOError):
+                    pass
+
+            settings["fullscreen"] = self.fullscreen
+
+            with open(self.config_path, 'w', encoding='utf-8') as f:
+                json.dump(settings, f, ensure_ascii=False, indent=2)
+        except IOError:
+            pass
+
+    def set_fullscreen_callback(self, callback):
+        """设置全屏切换回调函数"""
+        self.fullscreen_callback = callback
 
     def show(self):
         """显示设置界面"""
         self.visible = True
         self.selected_index = 0
+        self._load_settings()
 
     def hide(self):
         """隐藏设置界面"""
@@ -125,14 +178,37 @@ class SettingsUI:
         if option["key"] == "language":
             # 切换语言
             self.lang_system.next_language()
-        elif option["type"] == "toggle":
-            option["value"] = not option.get("value", False)
+
+        elif option["key"] == "sound":
+            # 切换音效
+            self.audio_system.toggle_sound()
+
+        elif option["key"] == "music":
+            # 切换音乐
+            self.audio_system.toggle_music()
+
+        elif option["key"] == "fullscreen":
+            # 切换全屏
+            self.fullscreen = not self.fullscreen
+            self._save_settings()
+            if self.fullscreen_callback:
+                self.fullscreen_callback(self.fullscreen)
 
     def _apply_settings(self):
         """应用设置"""
-        # 这里可以添加应用其他设置的逻辑
-        # 语言设置已经在切换时自动保存
-        pass
+        self._save_settings()
+
+    def _get_option_value(self, key):
+        """获取选项当前值"""
+        if key == "language":
+            return self.lang_system.get_language_name()
+        elif key == "sound":
+            return self.audio_system.is_sound_enabled()
+        elif key == "music":
+            return self.audio_system.is_music_enabled()
+        elif key == "fullscreen":
+            return self.fullscreen
+        return False
 
     def draw(self):
         """绘制设置界面"""
@@ -182,11 +258,12 @@ class SettingsUI:
             self.screen.blit(label, (option_rect.x + 20, option_rect.y + 12))
 
             # 选项值
+            value = self._get_option_value(option["key"])
+
             if option["key"] == "language":
-                value_text = self.lang_system.get_language_name()
+                value_text = value  # 已经是语言名称
                 value_color = (100, 200, 255)
             else:
-                value = option.get("value", False)
                 value_text = t("settings_on") if value else t("settings_off")
                 value_color = (100, 255, 100) if value else (255, 100, 100)
 
@@ -206,7 +283,7 @@ class SettingsUI:
         self._draw_button(self.apply_button, t("settings_apply"), self.hover_apply)
 
         # 操作提示
-        hint = self.fonts["tiny"].render("↑↓: 选择  ←→/Enter: 切换  ESC: 返回", True, GRAY)
+        hint = self.fonts["tiny"].render("↑↓: " + t("controls_move").split(":")[0] + "  ←→/Enter: " + t("settings_apply") + "  ESC: " + t("settings_back"), True, GRAY)
         hint_rect = hint.get_rect(centerx=self.x + self.width // 2, bottom=self.y + self.height - 10)
         self.screen.blit(hint, hint_rect)
 

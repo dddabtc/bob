@@ -30,6 +30,7 @@ from ui.save_ui import SaveLoadUI, ContinueButton
 from ui.settings_ui import SettingsUI
 from systems.language import t, get_lang
 
+from systems.audio import get_audio, play_sound
 
 class Game:
     """游戏主类"""
@@ -68,6 +69,13 @@ class Game:
 
         # 语言系统
         self.lang_system = get_lang()
+
+        # 音效系统
+        self.audio_system = get_audio()
+
+        # 全屏状态
+        self.is_fullscreen = False
+        self.settings_ui.set_fullscreen_callback(self._toggle_fullscreen)
 
         # 存档系统
         import os
@@ -177,6 +185,27 @@ class Game:
                 fonts[name] = pygame.font.Font(None, size)
 
         return fonts
+
+    def _toggle_fullscreen(self, fullscreen):
+        """切换全屏/窗口模式"""
+        self.is_fullscreen = fullscreen
+        if fullscreen:
+            self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.FULLSCREEN)
+        else:
+            self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+
+        # 更新所有UI的screen引用
+        self.main_menu.screen = self.screen
+        self.pause_menu.screen = self.screen
+        self.pathway_select_ui.screen = self.screen
+        self.game_hud.screen = self.screen
+        self.inventory_ui.screen = self.screen
+        self.quest_ui.screen = self.screen
+        self.quest_tracker.screen = self.screen
+        self.dialogue_box.screen = self.screen
+        self.weapon_ui.screen = self.screen
+        self.save_ui.screen = self.screen
+        self.settings_ui.screen = self.screen
 
     def run(self):
         """游戏主循环"""
@@ -1519,7 +1548,6 @@ class Game:
             lamp_glow = pygame.Surface((80, 60), pygame.SRCALPHA)
             pygame.draw.ellipse(lamp_glow, (255, 200, 100, 40), (0, 0, 80, 60))
             self.screen.blit(lamp_glow, (lx - 40, SCREEN_HEIGHT - 260))
-
         fog = pygame.Surface((SCREEN_WIDTH, 100))
         fog.fill((40, 40, 60))
         fog.set_alpha(50)

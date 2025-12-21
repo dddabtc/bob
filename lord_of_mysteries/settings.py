@@ -63,3 +63,12 @@ FONT_SIZES = {
 
 # 语言设置
 DEFAULT_LANGUAGE = "zh_CN"  # 默认语言: zh_CN (简体中文), en_US (English)
+
+# 音频设置
+DEFAULT_SOUND_VOLUME = 0.7  # 音效音量 (0.0 - 1.0)
+DEFAULT_MUSIC_VOLUME = 0.5  # 音乐音量 (0.0 - 1.0)
+SOUND_ENABLED = True        # 音效开关
+MUSIC_ENABLED = True        # 音乐开关
+
+# 显示设置
+FULLSCREEN = False          # 全屏模式
