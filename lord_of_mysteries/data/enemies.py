@@ -20,7 +20,8 @@ ENEMY_TYPES = {
         "attack_cooldown": 1.5,
         "drops": [
             {"item": "灵性碎片", "chance": 0.5, "count": (1, 2)},
-            {"item": "邪灵精华", "chance": 0.2, "count": (1, 1)},
+            {"item": "紫月花", "chance": 0.3, "count": (1, 1)},
+            {"item": "梦境尘埃", "chance": 0.2, "count": (1, 1)},
         ]
     },
 
@@ -39,7 +40,8 @@ ENEMY_TYPES = {
         "attack_cooldown": 2.0,
         "drops": [
             {"item": "腐烂之心", "chance": 0.4, "count": (1, 1)},
-            {"item": "尸体残骸", "chance": 0.6, "count": (1, 3)},
+            {"item": "夜香花", "chance": 0.3, "count": (1, 1)},
+            {"item": "黑曜石粉", "chance": 0.2, "count": (1, 1)},
         ]
     },
 
@@ -58,8 +60,9 @@ ENEMY_TYPES = {
         "attack_cooldown": 2.5,
         "projectile_speed": 6,
         "drops": [
-            {"item": "梦魇精华", "chance": 0.4, "count": (1, 2)},
-            {"item": "深蓝梦魇花", "chance": 0.3, "count": (1, 1)},
+            {"item": "梦境尘埃", "chance": 0.5, "count": (1, 2)},
+            {"item": "九叶莲", "chance": 0.25, "count": (1, 1)},
+            {"item": "星辰草", "chance": 0.2, "count": (1, 1)},
         ]
     },
 
@@ -77,8 +80,9 @@ ENEMY_TYPES = {
         "attack_range": 45,
         "attack_cooldown": 1.2,
         "drops": [
-            {"item": "邪教徽章", "chance": 0.3, "count": (1, 1)},
-            {"item": "血色布料", "chance": 0.5, "count": (1, 2)},
+            {"item": "灵银粉", "chance": 0.3, "count": (1, 1)},
+            {"item": "冷杉精华", "chance": 0.3, "count": (1, 1)},
+            {"item": "蒸馏水", "chance": 0.4, "count": (1, 2)},
         ]
     },
 
@@ -100,7 +104,8 @@ ENEMY_TYPES = {
         "drops": [
             {"item": "非凡特性", "chance": 0.8, "count": (1, 1)},
             {"item": "灵性水晶", "chance": 0.5, "count": (1, 2)},
-            {"item": "序列材料", "chance": 0.3, "count": (1, 1)},
+            {"item": "命运之弦", "chance": 0.2, "count": (1, 1)},
+            {"item": "深红月晶", "chance": 0.15, "count": (1, 1)},
         ]
     },
 
@@ -121,6 +126,8 @@ ENEMY_TYPES = {
         "drops": [
             {"item": "暗影精华", "chance": 0.6, "count": (1, 2)},
             {"item": "隐匿之心", "chance": 0.3, "count": (1, 1)},
+            {"item": "命运之弦", "chance": 0.15, "count": (1, 1)},
+            {"item": "隐者之眼", "chance": 0.2, "count": (1, 1)},
         ]
     },
 
@@ -142,6 +149,8 @@ ENEMY_TYPES = {
         "drops": [
             {"item": "邪灵之心", "chance": 0.7, "count": (1, 1)},
             {"item": "灵性水晶", "chance": 0.8, "count": (2, 4)},
+            {"item": "命运之弦", "chance": 0.25, "count": (1, 1)},
+            {"item": "死者耳语", "chance": 0.3, "count": (1, 1)},
         ]
     },
 
@@ -149,140 +158,145 @@ ENEMY_TYPES = {
     "极光会主教": {
         "name": "极光会主教",
         "type": "boss",
-        "hp": 500,
-        "attack": 35,
-        "defense": 15,
-        "speed": 3,
+        "hp": 150,           # 大幅降低HP，序列9玩家可击败
+        "attack": 10,        # 大幅降低攻击力
+        "defense": 3,        # 大幅降低防御
+        "speed": 1.5,        # 降低移动速度
         "size": 60,
         "color": (255, 100, 100),
         "exp": 200,
         "behavior": "boss",
-        "attack_range": 80,
-        "attack_cooldown": 1.5,
-        "skills": ["火焰风暴", "召唤信徒", "狂暴", "十字火焰", "神圣审判"],
-        "phases": 3,
+        "attack_range": 60,  # 缩小攻击范围
+        "attack_cooldown": 2.5,  # 攻击间隔更长
+        "skills": ["火焰风暴"],  # 只保留火焰风暴
+        "phases": 1,         # 单阶段，简化战斗
         "phase_skills": {
-            1: ["火焰风暴", "召唤信徒"],
-            2: ["火焰风暴", "十字火焰", "召唤信徒"],
-            3: ["狂暴", "十字火焰", "神圣审判"],
+            1: ["火焰风暴"],
         },
         "drops": [
-            {"item": "极光会圣物", "chance": 1.0, "count": (1, 1)},
-            {"item": "序列魔药配方", "chance": 0.5, "count": (1, 1)},
-            {"item": "非凡特性", "chance": 1.0, "count": (2, 3)},
+            # 晋升材料（序列8需要）
+            {"item": "梦境尘埃", "chance": 1.0, "count": (2, 4)},
+            {"item": "九叶莲", "chance": 1.0, "count": (1, 2)},
+            {"item": "紫月花", "chance": 1.0, "count": (2, 3)},
+            {"item": "灵银粉", "chance": 0.8, "count": (1, 2)},
+            # 序列7材料
+            {"item": "命运之弦", "chance": 1.0, "count": (1, 2)},
+            {"item": "深红月晶", "chance": 1.0, "count": (1, 2)},
+            {"item": "太阳圣水", "chance": 0.8, "count": (1, 2)},
+            # Boss专属材料
+            {"item": "极光碎片", "chance": 1.0, "count": (1, 2)},
         ]
     },
 
     "愚者之影": {
         "name": "愚者之影",
         "type": "boss",
-        "hp": 800,
-        "attack": 50,
-        "defense": 20,
-        "speed": 4,
+        "hp": 250,           # 大幅降低 (原800)
+        "attack": 15,        # 大幅降低 (原50)
+        "defense": 5,        # 大幅降低 (原20)
+        "speed": 2.5,        # 降低速度 (原4)
         "size": 55,
         "color": (100, 100, 150),
         "exp": 300,
         "behavior": "boss",
-        "attack_range": 100,
-        "attack_cooldown": 1.2,
-        "skills": ["命运逆转", "欺诈迷雾", "纸牌风暴", "时间回溯", "分身术"],
-        "phases": 3,
+        "attack_range": 70,  # 缩小范围 (原100)
+        "attack_cooldown": 2.0,  # 攻击更慢 (原1.2)
+        "skills": ["欺诈迷雾", "纸牌风暴"],  # 减少技能
+        "phases": 2,         # 减少阶段 (原3)
         "phase_skills": {
-            1: ["欺诈迷雾", "纸牌风暴"],
-            2: ["命运逆转", "纸牌风暴", "分身术"],
-            3: ["时间回溯", "纸牌风暴", "分身术"],
+            1: ["欺诈迷雾"],
+            2: ["纸牌风暴", "欺诈迷雾"],
         },
-        "evasion": 0.3,  # 30%闪避率
+        "evasion": 0.15,     # 降低闪避 (原0.3)
         "drops": [
-            {"item": "愚者权杖", "chance": 1.0, "count": (1, 1)},
-            {"item": "命运之线", "chance": 0.6, "count": (1, 2)},
-            {"item": "非凡特性", "chance": 1.0, "count": (3, 4)},
+            {"item": "千面之种", "chance": 1.0, "count": (1, 2)},
+            {"item": "虚空精华", "chance": 1.0, "count": (1, 2)},
+            {"item": "命运之弦", "chance": 1.0, "count": (2, 3)},
+            {"item": "极光碎片", "chance": 1.0, "count": (1, 2)},
         ]
     },
 
     "永暗巨兽": {
         "name": "永暗巨兽",
         "type": "boss",
-        "hp": 1200,
-        "attack": 40,
-        "defense": 30,
-        "speed": 2,
+        "hp": 400,           # 大幅降低 (原1200)
+        "attack": 18,        # 大幅降低 (原40)
+        "defense": 8,        # 大幅降低 (原30)
+        "speed": 1.5,        # 降低速度 (原2)
         "size": 80,
         "color": (30, 30, 50),
         "exp": 350,
         "behavior": "boss",
-        "attack_range": 120,
-        "attack_cooldown": 2.0,
-        "skills": ["黑暗吞噬", "亡灵召唤", "死亡凝视", "不死之躯", "黑暗领域"],
-        "phases": 4,
+        "attack_range": 80,  # 缩小范围 (原120)
+        "attack_cooldown": 2.5,  # 攻击更慢 (原2.0)
+        "skills": ["黑暗吞噬", "死亡凝视"],  # 减少技能
+        "phases": 2,         # 减少阶段 (原4)
         "phase_skills": {
-            1: ["黑暗吞噬", "亡灵召唤"],
-            2: ["黑暗吞噬", "死亡凝视", "亡灵召唤"],
-            3: ["黑暗领域", "死亡凝视", "亡灵召唤"],
-            4: ["不死之躯", "黑暗领域", "死亡凝视"],
+            1: ["黑暗吞噬"],
+            2: ["黑暗吞噬", "死亡凝视"],
         },
-        "can_revive": True,  # 可以复活一次
+        "can_revive": False,  # 取消复活 (原True)
         "drops": [
-            {"item": "永暗之心", "chance": 1.0, "count": (1, 1)},
-            {"item": "死亡精华", "chance": 0.8, "count": (2, 3)},
-            {"item": "非凡特性", "chance": 1.0, "count": (3, 5)},
+            {"item": "深渊之泪", "chance": 1.0, "count": (1, 2)},
+            {"item": "灵魂水晶", "chance": 1.0, "count": (1, 2)},
+            {"item": "虚空精华", "chance": 1.0, "count": (1, 2)},
+            {"item": "死者耳语", "chance": 1.0, "count": (2, 3)},
         ]
     },
 
     "原初魔女": {
         "name": "原初魔女",
         "type": "boss",
-        "hp": 600,
-        "attack": 60,
-        "defense": 15,
-        "speed": 3.5,
+        "hp": 200,           # 大幅降低 (原600)
+        "attack": 18,        # 大幅降低 (原60)
+        "defense": 4,        # 大幅降低 (原15)
+        "speed": 2.5,        # 降低速度 (原3.5)
         "size": 50,
         "color": (180, 50, 120),
         "exp": 280,
         "behavior": "boss",
-        "attack_range": 150,
-        "attack_cooldown": 1.0,
-        "skills": ["诅咒之触", "魅惑", "瘟疫爆发", "灵魂收割", "灾祸降临"],
-        "phases": 3,
+        "attack_range": 90,  # 缩小范围 (原150)
+        "attack_cooldown": 2.0,  # 攻击更慢 (原1.0)
+        "skills": ["诅咒之触", "瘟疫爆发"],  # 减少技能
+        "phases": 2,         # 减少阶段 (原3)
         "phase_skills": {
-            1: ["诅咒之触", "魅惑"],
-            2: ["瘟疫爆发", "诅咒之触", "魅惑"],
-            3: ["灵魂收割", "灾祸降临", "瘟疫爆发"],
+            1: ["诅咒之触"],
+            2: ["瘟疫爆发", "诅咒之触"],
         },
-        "dot_damage": 5,  # 持续伤害
+        "dot_damage": 2,     # 降低持续伤害 (原5)
         "drops": [
-            {"item": "魔女之冠", "chance": 1.0, "count": (1, 1)},
-            {"item": "诅咒宝石", "chance": 0.7, "count": (1, 2)},
-            {"item": "非凡特性", "chance": 1.0, "count": (2, 4)},
+            {"item": "灵魂水晶", "chance": 1.0, "count": (1, 2)},
+            {"item": "腐化之心", "chance": 1.0, "count": (2, 3)},
+            {"item": "隐者之眼", "chance": 1.0, "count": (1, 2)},
+            {"item": "深红月晶", "chance": 1.0, "count": (1, 2)},
         ]
     },
 
     "知识妖鬼": {
         "name": "知识妖鬼",
         "type": "boss",
-        "hp": 700,
-        "attack": 55,
-        "defense": 18,
-        "speed": 3,
+        "hp": 280,           # 大幅降低 (原700)
+        "attack": 16,        # 大幅降低 (原55)
+        "defense": 5,        # 大幅降低 (原18)
+        "speed": 2,          # 降低速度 (原3)
         "size": 55,
         "color": (200, 180, 100),
         "exp": 320,
         "behavior": "boss",
-        "attack_range": 180,
-        "attack_cooldown": 1.3,
-        "skills": ["疯狂低语", "知识压制", "卷轴轰炸", "真实之眼", "禁忌知识"],
-        "phases": 3,
+        "attack_range": 100, # 缩小范围 (原180)
+        "attack_cooldown": 2.2,  # 攻击更慢 (原1.3)
+        "skills": ["疯狂低语", "卷轴轰炸"],  # 减少技能
+        "phases": 2,         # 减少阶段 (原3)
         "phase_skills": {
-            1: ["疯狂低语", "卷轴轰炸"],
-            2: ["知识压制", "卷轴轰炸", "疯狂低语"],
-            3: ["真实之眼", "禁忌知识", "知识压制"],
+            1: ["疯狂低语"],
+            2: ["卷轴轰炸", "疯狂低语"],
         },
-        "can_silence": True,  # 可以封印玩家技能
+        "can_silence": False,  # 取消封印 (原True)
         "drops": [
-            {"item": "知识结晶", "chance": 1.0, "count": (1, 1)},
-            {"item": "禁忌卷轴", "chance": 0.6, "count": (1, 2)},
-            {"item": "非凡特性", "chance": 1.0, "count": (3, 4)},
+            {"item": "知识之书", "chance": 1.0, "count": (1, 2)},
+            {"item": "深红月晶", "chance": 1.0, "count": (2, 3)},
+            {"item": "灵银粉", "chance": 1.0, "count": (2, 3)},
+            {"item": "梦境尘埃", "chance": 1.0, "count": (2, 3)},
         ]
     },
 }
@@ -365,15 +379,20 @@ def get_wave_enemies(wave_number):
         wave["enemies"] = [(boss_name, 1)]
         wave["boss_name"] = boss_name
         wave["is_boss_wave"] = True
+        wave["stat_multiplier"] = 1.0 + 0.3 * (multiplier - 1)  # Boss也增强属性
         return wave
 
-    # 增加敌人数量
+    # 增加敌人数量和属性
     if multiplier > 1:
         new_enemies = []
         for enemy_type, count in wave["enemies"]:
             new_count = int(count * (1 + 0.2 * (multiplier - 1)))
             new_enemies.append((enemy_type, new_count))
         wave["enemies"] = new_enemies
+        # 属性增强倍率：每轮增加30%
+        wave["stat_multiplier"] = 1.0 + 0.3 * (multiplier - 1)
+    else:
+        wave["stat_multiplier"] = 1.0
 
     return wave
 

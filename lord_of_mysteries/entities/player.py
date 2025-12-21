@@ -15,6 +15,7 @@ class Player:
         self.x = x
         self.y = y
         self.pathway_id = pathway_id
+        self.pathway_name = pathway_id  # 途径名称，用于魔药配方查询
         self.pathway_data = pathway_data
         self.sequence = sequence
 
@@ -72,6 +73,17 @@ class Player:
         # 动画相关
         self.animation_frame = 0
         self.animation_timer = 0
+
+        # 生命恢复系统
+        self.hp_regen_rate = 2  # 每秒恢复2点生命
+        self.hp_regen_timer = 0
+        self.hp_regen_interval = 1.0  # 每1秒恢复一次
+
+        # 魔药消化系统
+        self.is_digesting = False  # 是否正在消化魔药
+        self.digest_timer = 0  # 消化计时器
+        self.digest_duration = 30.0  # 消化时间（30秒）
+        self.digest_progress = 0  # 消化进度 0-100%
 
         # 投射物列表
         self.projectiles = []
@@ -174,6 +186,40 @@ class Player:
         for skill in self.skills.values():
             if skill["current_cooldown"] > 0:
                 skill["current_cooldown"] -= dt
+
+        # 生命恢复
+        self._update_hp_regen(dt)
+
+    def _update_hp_regen(self, dt):
+        """更新生命值恢复"""
+        if self.hp < self.max_hp:
+            self.hp_regen_timer += dt
+            if self.hp_regen_timer >= self.hp_regen_interval:
+                self.hp_regen_timer = 0
+                self.hp = min(self.max_hp, self.hp + self.hp_regen_rate)
+
+        # 更新魔药消化
+        self._update_digest(dt)
+
+    def _update_digest(self, dt):
+        """更新魔药消化进度"""
+        if self.is_digesting:
+            self.digest_timer += dt
+            self.digest_progress = min(100, (self.digest_timer / self.digest_duration) * 100)
+            if self.digest_timer >= self.digest_duration:
+                self.is_digesting = False
+                self.digest_timer = 0
+                self.digest_progress = 100
+
+    def start_digest(self):
+        """开始消化魔药"""
+        self.is_digesting = True
+        self.digest_timer = 0
+        self.digest_progress = 0
+
+    def can_advance(self):
+        """是否可以继续晋升（需要消化完成）"""
+        return not self.is_digesting or self.digest_progress >= 100
 
     def _update_buffs(self, dt):
         """更新增益效果"""

@@ -17,8 +17,8 @@ class PotionSystem:
         pathway_name = player.pathway_name
         next_sequence = player.sequence - 1  # 晋升到更高序列
 
-        if next_sequence < 7:
-            return None, "序列6及以上需要完成最终任务"
+        if next_sequence < 0:
+            return None, "已达到最高序列"
 
         recipe = get_potion_recipe(pathway_name, next_sequence)
         if not recipe:
@@ -31,8 +31,12 @@ class PotionSystem:
         pathway_name = player.pathway_name
         next_sequence = player.sequence - 1
 
-        if next_sequence < 7:
-            return False, "序列6及以上需要完成最终任务", None
+        if next_sequence < 0:
+            return False, "已达到最高序列", None
+
+        # 检查是否正在消化上一个魔药
+        if hasattr(player, 'is_digesting') and player.is_digesting:
+            return False, f"正在消化魔药 ({player.digest_progress:.0f}%)", None
 
         recipe = get_potion_recipe(pathway_name, next_sequence)
         if not recipe:
@@ -47,10 +51,10 @@ class PotionSystem:
         pathway_name = player.pathway_name
         next_sequence = player.sequence - 1
 
-        if next_sequence < 7:
+        if next_sequence < 0:
             return {
                 "available": False,
-                "reason": "序列6及以上需要完成最终任务",
+                "reason": "已达到最高序列",
                 "recipe": None,
                 "materials_status": [],
             }
@@ -114,8 +118,8 @@ class PotionSystem:
         current_sequence = player.sequence
         next_sequence = current_sequence - 1
 
-        if next_sequence < 7:
-            return False, "序列6及以上需要完成最终任务"
+        if next_sequence < 0:
+            return False, "已达到最高序列"
 
         # 获取途径数据
         pathway = PATHWAYS.get(pathway_name)
@@ -140,7 +144,11 @@ class PotionSystem:
         player.skill_names = new_seq_data["skills"]
         player._init_skills()
 
-        return True, f"晋升为序列{next_sequence} {player.name}！"
+        # 开始消化魔药（需要时间来消化）
+        if hasattr(player, 'start_digest'):
+            player.start_digest()
+
+        return True, f"晋升为序列{next_sequence} {player.name}！需要消化魔药..."
 
     def get_all_recipes_for_pathway(self, pathway_name):
         """获取指定途径的所有魔药配方"""
@@ -151,8 +159,8 @@ class PotionSystem:
         pathway_name = player.pathway_name
         current_seq = player.sequence
 
-        # 可晋升范围是序列9到序列7
-        total_craftable = 3  # 序列9, 8, 7
+        # 可晋升范围是序列9到序列0
+        total_craftable = 10  # 序列9到0
         crafted = 9 - current_seq  # 已经晋升的次数
 
         return {
@@ -161,6 +169,6 @@ class PotionSystem:
             "current_name": player.name,
             "progress": crafted,
             "max_progress": total_craftable,
-            "can_advance": current_seq > 7,
-            "next_sequence": current_seq - 1 if current_seq > 7 else None,
+            "can_advance": current_seq > 0,
+            "next_sequence": current_seq - 1 if current_seq > 0 else None,
         }

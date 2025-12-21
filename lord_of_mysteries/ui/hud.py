@@ -74,6 +74,26 @@ class GameHUD:
             self.screen.blit(value_text, (70, attr_y))
             attr_y += 22
 
+        # 魔药消化进度
+        if hasattr(player, 'is_digesting') and player.is_digesting:
+            digest_y = attr_y + 5
+            digest_text = self.fonts["tiny"].render("消化中:", True, (200, 150, 100))
+            self.screen.blit(digest_text, (20, digest_y))
+
+            # 进度条背景
+            bar_bg = pygame.Rect(20, digest_y + 18, 100, 8)
+            pygame.draw.rect(self.screen, (40, 40, 50), bar_bg, border_radius=3)
+
+            # 进度条
+            progress_width = int(100 * player.digest_progress / 100)
+            if progress_width > 0:
+                bar = pygame.Rect(20, digest_y + 18, progress_width, 8)
+                pygame.draw.rect(self.screen, (200, 150, 100), bar, border_radius=3)
+
+            # 百分比文字
+            pct_text = self.fonts["tiny"].render(f"{player.digest_progress:.0f}%", True, (200, 150, 100))
+            self.screen.blit(pct_text, (125, digest_y + 14))
+
     def _draw_skills(self, player):
         """绘制技能栏"""
         skill_y = 190
@@ -141,6 +161,7 @@ class GameHUD:
             "K - 闪避",
             "1-4 - 技能",
             "I - 背包/炮制",
+            "E - 武器",
             "Q - 任务",
             "ESC - 暂停"
         ]

@@ -19,7 +19,7 @@ from entities.enemy import Enemy
 from data.pathways import PATHWAYS
 from data.enemies import get_enemy_data, get_wave_enemies
 from data.items import MATERIALS, QUALITY_COLORS
-from data.weapons import WEAPONS, get_weapon_data, get_all_droppable_weapons
+from data.weapons import WEAPONS, get_weapon_data, get_all_droppable_weapons, STARTER_WEAPONS
 from systems.inventory import Inventory
 from systems.potion import PotionSystem
 from systems.quest import QuestSystem
@@ -91,6 +91,7 @@ class Game:
         # Boss战斗
         self.current_boss = None
         self.is_boss_wave = False
+        self.wave_stat_multiplier = 1.0
 
         # 统计
         self.kill_count = 0
@@ -358,8 +359,8 @@ class Game:
                         self.inventory_ui.toggle()
                     elif event.key == pygame.K_q:
                         self.quest_ui.toggle()
-                    elif event.key == pygame.K_w and pygame.key.get_mods() & pygame.KMOD_SHIFT:
-                        # Shift+W 打开武器背包
+                    elif event.key == pygame.K_e:
+                        # E 打开武器背包
                         self.weapon_ui.toggle()
 
         elif self.state == GameState.GAME_OVER:
@@ -391,6 +392,10 @@ class Game:
         self.floating_texts = []
         self.drops = []
         self.inventory = Inventory()
+
+        # 给玩家初始武器
+        self.inventory.add_weapon(STARTER_WEAPONS["melee"])   # 铁剑
+        self.inventory.add_weapon(STARTER_WEAPONS["ranged"])  # 猎弓
 
         # 设置武器UI引用
         self.weapon_ui.set_references(self.inventory, self.player)
@@ -433,6 +438,7 @@ class Game:
         self.playtime = 0
         self.current_boss = None
         self.is_boss_wave = False
+        self.wave_stat_multiplier = 1.0
         self.boss_ui.current_boss = None
         self.boss_ui.show_intro = False
         self.boss_ui.show_victory = False
@@ -500,25 +506,33 @@ class Game:
         if not self.player:
             return
 
-        # 更新游戏时间
-        self.playtime += self.dt
+        # 检查是否有UI打开（背包、任务、武器UI等）- 打开时暂停游戏世界
+        ui_open = (self.inventory_ui.is_open or
+                   self.quest_ui.is_open or
+                   self.weapon_ui.visible or
+                   self.dialogue_box.is_active())
 
-        keys = pygame.key.get_pressed()
+        if not ui_open:
+            # 只有UI未打开时才更新游戏世界
+            # 更新游戏时间
+            self.playtime += self.dt
 
-        # 更新玩家
-        self.player.update(self.dt, keys, self.events)
+            keys = pygame.key.get_pressed()
 
-        # 更新敌人
-        self._update_enemies()
+            # 更新玩家
+            self.player.update(self.dt, keys, self.events)
 
-        # 更新波次
-        self._update_waves()
+            # 更新敌人
+            self._update_enemies()
 
-        # 检查战斗碰撞
-        self._check_combat()
+            # 更新波次
+            self._update_waves()
 
-        # 更新掉落物
-        self._update_drops()
+            # 检查战斗碰撞
+            self._check_combat()
+
+            # 更新掉落物
+            self._update_drops()
 
         # 更新伤害数字
         self.damage_numbers = [d for d in self.damage_numbers if d.update(self.dt)]
@@ -618,6 +632,7 @@ class Game:
 
         wave_config = get_wave_enemies(self.current_wave)
         self.is_boss_wave = wave_config.get("is_boss_wave", False)
+        self.wave_stat_multiplier = wave_config.get("stat_multiplier", 1.0)
 
         if self.is_boss_wave:
             # Boss波次特殊提示
@@ -673,10 +688,11 @@ class Game:
         """生成敌人"""
         enemy_data = get_enemy_data(enemy_type)
 
-        # 根据波次增加难度
-        difficulty_mult = 1 + (self.current_wave - 1) * 0.1
-        enemy_data["hp"] = int(enemy_data["hp"] * difficulty_mult)
-        enemy_data["attack"] = int(enemy_data["attack"] * difficulty_mult)
+        # 根据波次循环增加难度（使用波次配置的属性倍率）
+        stat_mult = getattr(self, 'wave_stat_multiplier', 1.0)
+        enemy_data["hp"] = int(enemy_data["hp"] * stat_mult)
+        enemy_data["attack"] = int(enemy_data["attack"] * stat_mult)
+        enemy_data["defense"] = int(enemy_data.get("defense", 0) * stat_mult)
 
         enemy = Enemy(x, y, enemy_data)
         self.enemies.append(enemy)
