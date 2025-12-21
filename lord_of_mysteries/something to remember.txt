@@ -1,0 +1,1 @@
+git commit -m "[chg] some changes" -a;git push
