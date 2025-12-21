@@ -1,0 +1,123 @@
+{
+  "version": "1.0",
+  "timestamp": 1766264992.450526,
+  "datetime": "2025-12-20 17:09:52",
+  "data": {
+    "player": {
+      "name": "无面人",
+      "pathway": "占卜家",
+      "sequence": 6,
+      "level": 1,
+      "exp": 0,
+      "hp": 280,
+      "max_hp": 280,
+      "attack": 60,
+      "defense": 18,
+      "x": 545.0687009838807,
+      "y": 242.21747278863495,
+      "equipped_weapon": "铁剑",
+      "skills": {
+        "灵视": {
+          "type": "buff",
+          "cooldown": 10,
+          "duration": 5,
+          "desc": "开启灵视，看穿敌人弱点，增加20%暴击率",
+          "current_cooldown": 0,
+          "name": "灵视"
+        },
+        "占卜": {
+          "type": "buff",
+          "cooldown": 15,
+          "duration": 3,
+          "desc": "预知危险，短暂无敌",
+          "current_cooldown": 0,
+          "name": "占卜"
+        }
+      }
+    },
+    "inventory": {
+      "materials": {
+        "黑曜石粉": 10,
+        "九叶莲": 15,
+        "星辰草": 11,
+        "冷杉精华": 13,
+        "夜香花": 12,
+        "灵银粉": 15,
+        "命运之弦": 10,
+        "梦境尘埃": 58,
+        "紫月花": 37,
+        "深红月晶": 8,
+        "蒸馏水": 14,
+        "死者耳语": 6,
+        "隐者之眼": 4,
+        "虚空精华": 3,
+        "灵魂水晶": 3,
+        "腐化之心": 2,
+        "知识之书": 2,
+        "深渊之泪": 2
+      },
+      "consumables": {},
+      "weapons": [
+        "铁剑",
+        "猎弓"
+      ],
+      "gold": 0
+    },
+    "quest": {
+      "quest_status": {
+        "main_001": "available",
+        "main_002": "locked",
+        "main_003": "locked",
+        "main_004": "locked",
+        "main_005": "locked",
+        "main_006": "locked",
+        "main_007": "locked",
+        "side_001": "available",
+        "side_002": "available",
+        "side_003": "locked",
+        "side_004": "locked",
+        "side_005": "locked",
+        "side_006": "locked",
+        "side_007": "locked",
+        "side_008": "locked",
+        "side_009": "available",
+        "side_010": "locked",
+        "side_011": "locked",
+        "side_012": "locked",
+        "side_013": "locked",
+        "side_014": "locked",
+        "side_015": "available",
+        "side_016": "locked",
+        "side_017": "locked",
+        "daily_001": "available",
+        "daily_002": "available",
+        "daily_003": "available",
+        "daily_004": "available",
+        "daily_005": "available",
+        "daily_006": "locked",
+        "daily_007": "locked",
+        "daily_008": "available",
+        "daily_009": "available",
+        "daily_010": "locked",
+        "weekly_001": "available",
+        "weekly_002": "locked",
+        "weekly_003": "available",
+        "weekly_004": "locked"
+      },
+      "quest_progress": {},
+      "completed_quests": [],
+      "active_quests": []
+    },
+    "wave": 1,
+    "score": 0,
+    "playtime": 490.7389999998984,
+    "kills": 0,
+    "stats": {
+      "total_kills": 0,
+      "max_wave": 0,
+      "max_combo": 0,
+      "bosses_killed": 0,
+      "deaths": 0
+    }
+  }
+}
