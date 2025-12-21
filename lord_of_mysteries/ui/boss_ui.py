@@ -1,6 +1,6 @@
 """
 Boss战斗UI系统
-显示Boss血条、阶段、技能预警等
+显示Boss血条、阶段、技能预警等功能
 """
 
 import pygame
