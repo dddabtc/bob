@@ -1,64 +1,42 @@
 {
   "version": "1.0",
-  "timestamp": 1766359937.051336,
-  "datetime": "2025-12-21 19:32:17",
+  "timestamp": 1766441757.917145,
+  "datetime": "2025-12-22 18:15:57",
   "data": {
     "player": {
-      "name": "占卜家",
-      "pathway": "占卜家",
-      "sequence": 6,
+      "name": "刺客",
+      "pathway": "刺客",
+      "sequence": 9,
       "level": 1,
       "exp": 0,
-      "hp": 280,
-      "max_hp": 280,
-      "attack": 60,
-      "defense": 18,
-      "x": 478.4830637727921,
-      "y": 294.1749999999965,
+      "hp": 85,
+      "max_hp": 85,
+      "attack": 20,
+      "defense": 3,
+      "x": 512,
+      "y": 484,
       "equipped_weapon": "铁剑",
       "skills": {
-        "灵视": {
+        "潜行": {
           "type": "buff",
-          "cooldown": 10,
-          "duration": 5,
-          "desc": "开启灵视，看穿敌人弱点，增加20%暴击率",
+          "cooldown": 12,
+          "duration": 10,
+          "desc": "进入潜行状态",
           "current_cooldown": 0,
-          "name": "灵视"
+          "name": "潜行"
         },
-        "占卜": {
-          "type": "buff",
-          "cooldown": 15,
-          "duration": 3,
-          "desc": "预知危险，短暂无敌",
+        "致命一击": {
+          "type": "melee",
+          "cooldown": 8,
+          "damage": 100,
+          "desc": "从背后发动致命攻击",
           "current_cooldown": 0,
-          "name": "占卜"
+          "name": "致命一击"
         }
       }
     },
     "inventory": {
-      "materials": {
-        "梦境尘埃": 111,
-        "紫月花": 66,
-        "九叶莲": 17,
-        "夜香花": 23,
-        "黑曜石粉": 19,
-        "灵银粉": 32,
-        "命运之弦": 16,
-        "冷杉精华": 28,
-        "蒸馏水": 44,
-        "死者耳语": 6,
-        "深红月晶": 9,
-        "太阳圣水": 3,
-        "虚空精华": 5,
-        "星辰草": 11,
-        "隐者之眼": 3,
-        "腐化之心": 2,
-        "灵魂水晶": 2,
-        "知识之书": 1,
-        "深渊之泪": 1,
-        "极光碎片": 2,
-        "千面之种": 1
-      },
+      "materials": {},
       "consumables": {},
       "weapons": [
         "铁剑",
@@ -113,7 +91,7 @@
     },
     "wave": 1,
     "score": 0,
-    "playtime": 737.2370000005794,
+    "playtime": 1.5059999999999978,
     "kills": 0,
     "stats": {
       "total_kills": 0,

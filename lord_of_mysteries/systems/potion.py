@@ -144,6 +144,10 @@ class PotionSystem:
         player.skill_names = new_seq_data["skills"]
         player._init_skills()
 
+        # 更新角色精灵图（晋升后使用新序列的图片）
+        if hasattr(player, '_load_sprite'):
+            player._load_sprite()
+
         # 开始消化魔药（需要时间来消化）
         if hasattr(player, 'start_digest'):
             player.start_digest()
