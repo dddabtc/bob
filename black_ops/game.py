@@ -27,13 +27,21 @@ class Game:
     """游戏主类"""
 
     def __init__(self):
+        # macOS 需要特殊处理才能正确显示窗口
+        os.environ['SDL_VIDEO_CENTERED'] = '1'
+        os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
+
         pygame.init()
         pygame.mixer.init()
 
-        # 创建窗口 - 居中显示
-        os.environ['SDL_VIDEO_CENTERED'] = '1'
-        self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+        # 创建窗口 - 使用 SHOWN 标志确保窗口可见
+        self.screen = pygame.display.set_mode(
+            (SCREEN_WIDTH, SCREEN_HEIGHT),
+            pygame.SHOWN
+        )
+
         pygame.display.set_caption(TITLE)
+        pygame.display.flip()
         self.clock = pygame.time.Clock()
         print(f"窗口已创建: {SCREEN_WIDTH}x{SCREEN_HEIGHT}")
 
