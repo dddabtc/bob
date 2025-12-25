@@ -67,6 +67,20 @@ class BlockType:
     SNOW = 17
     ICE = 18
     GRAVEL = 19
+    # 村庄方块
+    FENCE = 20          # 栅栏
+    DOOR = 21           # 门
+    STAIRS = 22         # 楼梯
+    TORCH = 23          # 火把
+    BOOKSHELF = 24      # 书架
+    CRAFTING_TABLE = 25 # 工作台
+    FURNACE = 26        # 熔炉
+    HAY = 27            # 干草块
+    PUMPKIN = 28        # 南瓜
+    WOOL = 29           # 羊毛
+    LANTERN = 30        # 灯笼
+    BARREL = 31         # 木桶
+    LOG = 32            # 去皮原木
 
 
 # 方块颜色 (R, G, B) - 每个面可以不同
@@ -132,6 +146,58 @@ BLOCK_COLORS = {
     BlockType.GRAVEL: {
         'all': (0.5, 0.48, 0.45),
     },
+    # 村庄方块颜色
+    BlockType.FENCE: {
+        'all': (0.6, 0.45, 0.25),
+    },
+    BlockType.DOOR: {
+        'all': (0.5, 0.35, 0.2),
+    },
+    BlockType.STAIRS: {
+        'all': (0.65, 0.5, 0.3),
+    },
+    BlockType.TORCH: {
+        'all': (1.0, 0.8, 0.3),
+    },
+    BlockType.BOOKSHELF: {
+        'top': (0.6, 0.45, 0.25),
+        'bottom': (0.6, 0.45, 0.25),
+        'side': (0.5, 0.3, 0.15),
+    },
+    BlockType.CRAFTING_TABLE: {
+        'top': (0.6, 0.4, 0.2),
+        'bottom': (0.55, 0.35, 0.18),
+        'side': (0.5, 0.32, 0.15),
+    },
+    BlockType.FURNACE: {
+        'all': (0.4, 0.4, 0.4),
+    },
+    BlockType.HAY: {
+        'top': (0.85, 0.75, 0.35),
+        'bottom': (0.85, 0.75, 0.35),
+        'side': (0.8, 0.7, 0.3),
+    },
+    BlockType.PUMPKIN: {
+        'top': (0.6, 0.4, 0.15),
+        'bottom': (0.6, 0.4, 0.15),
+        'side': (0.9, 0.5, 0.1),
+    },
+    BlockType.WOOL: {
+        'all': (0.9, 0.9, 0.85),
+    },
+    BlockType.LANTERN: {
+        'all': (0.3, 0.3, 0.3),
+    },
+    BlockType.BARREL: {
+        'top': (0.5, 0.35, 0.2),
+        'bottom': (0.5, 0.35, 0.2),
+        'side': (0.55, 0.4, 0.22),
+    },
+    BlockType.LOG: {
+        'top': (0.55, 0.4, 0.22),
+        'bottom': (0.55, 0.4, 0.22),
+        'side': (0.5, 0.35, 0.18),
+    },
 }
 
 # 方块属性
@@ -156,6 +222,20 @@ BLOCK_DATA = {
     BlockType.SNOW: {'name': '雪块', 'solid': True, 'transparent': False, 'hardness': 0.2},
     BlockType.ICE: {'name': '冰块', 'solid': True, 'transparent': True, 'hardness': 0.5},
     BlockType.GRAVEL: {'name': '砂砾', 'solid': True, 'transparent': False, 'hardness': 0.6},
+    # 村庄方块属性
+    BlockType.FENCE: {'name': '栅栏', 'solid': True, 'transparent': True, 'hardness': 2.0},
+    BlockType.DOOR: {'name': '门', 'solid': True, 'transparent': True, 'hardness': 3.0},
+    BlockType.STAIRS: {'name': '楼梯', 'solid': True, 'transparent': False, 'hardness': 2.0},
+    BlockType.TORCH: {'name': '火把', 'solid': False, 'transparent': True, 'hardness': 0},
+    BlockType.BOOKSHELF: {'name': '书架', 'solid': True, 'transparent': False, 'hardness': 1.5},
+    BlockType.CRAFTING_TABLE: {'name': '工作台', 'solid': True, 'transparent': False, 'hardness': 2.5},
+    BlockType.FURNACE: {'name': '熔炉', 'solid': True, 'transparent': False, 'hardness': 3.5},
+    BlockType.HAY: {'name': '干草块', 'solid': True, 'transparent': False, 'hardness': 0.5},
+    BlockType.PUMPKIN: {'name': '南瓜', 'solid': True, 'transparent': False, 'hardness': 1.0},
+    BlockType.WOOL: {'name': '羊毛', 'solid': True, 'transparent': False, 'hardness': 0.8},
+    BlockType.LANTERN: {'name': '灯笼', 'solid': True, 'transparent': True, 'hardness': 3.5},
+    BlockType.BARREL: {'name': '木桶', 'solid': True, 'transparent': False, 'hardness': 2.5},
+    BlockType.LOG: {'name': '去皮原木', 'solid': True, 'transparent': False, 'hardness': 2.0},
 }
 
 # 方块掉落
@@ -177,4 +257,18 @@ BLOCK_DROPS = {
     BlockType.SNOW: BlockType.SNOW,
     BlockType.ICE: BlockType.ICE,
     BlockType.GRAVEL: BlockType.GRAVEL,
+    # 村庄方块掉落
+    BlockType.FENCE: BlockType.FENCE,
+    BlockType.DOOR: BlockType.DOOR,
+    BlockType.STAIRS: BlockType.PLANKS,
+    BlockType.TORCH: BlockType.TORCH,
+    BlockType.BOOKSHELF: BlockType.PLANKS,
+    BlockType.CRAFTING_TABLE: BlockType.CRAFTING_TABLE,
+    BlockType.FURNACE: BlockType.FURNACE,
+    BlockType.HAY: BlockType.HAY,
+    BlockType.PUMPKIN: BlockType.PUMPKIN,
+    BlockType.WOOL: BlockType.WOOL,
+    BlockType.LANTERN: BlockType.LANTERN,
+    BlockType.BARREL: BlockType.BARREL,
+    BlockType.LOG: BlockType.LOG,
 }

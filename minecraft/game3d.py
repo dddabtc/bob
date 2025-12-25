@@ -11,9 +11,11 @@ Minecraft 3D - 一个用Python、Pygame和OpenGL制作的3D Minecraft风格游�
     左键: 挖掘方块
     右键: 放置方块
     滚轮/1-9: 选择物品
-    E: 打开背包 (TODO)
+    E: 打开背包
     ESC: 暂停/菜单
     F3: 调试信息
+    F5: 保存游戏
+    F6: 加载游戏
 """
 
 import sys
@@ -36,6 +38,7 @@ from world3d import World
 from player3d import Player
 from renderer3d import Renderer
 from hud3d import HUD, PauseMenu, InventoryScreen
+from save_system import save_game, load_game, has_save
 
 
 class Game:
@@ -171,6 +174,21 @@ class Game:
 
         elif event.key == K_F3:
             self.debug_mode = not self.debug_mode
+
+        elif event.key == K_F5:
+            # 保存游戏
+            save_game(self.world, self.player)
+
+        elif event.key == K_F6:
+            # 加载游戏
+            if has_save():
+                load_game(self.world, self.player)
+                # 重新加载周围区块
+                player_chunk_x = math.floor(self.player.x / CHUNK_SIZE)
+                player_chunk_z = math.floor(self.player.z / CHUNK_SIZE)
+                self.world.get_chunks_around(player_chunk_x, player_chunk_z, RENDER_DISTANCE)
+            else:
+                print("没有找到存档文件")
 
         # 数字键选择快捷栏
         elif K_1 <= event.key <= K_9:
@@ -328,8 +346,11 @@ def main():
     print("  左键: 挖掘")
     print("  右键: 放置")
     print("  滚轮/1-9: 选择物品")
+    print("  E: 背包")
     print("  ESC: 暂停")
     print("  F3: 调试信息")
+    print("  F5: 保存游戏")
+    print("  F6: 加载游戏")
     print()
 
     game = Game()

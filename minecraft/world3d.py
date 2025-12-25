@@ -5,6 +5,7 @@ from settings3d import (
     BlockType, BLOCK_DATA, CHUNK_SIZE, WORLD_HEIGHT,
     SEA_LEVEL, GROUND_LEVEL, RENDER_DISTANCE
 )
+from village3d import VillageGenerator, generate_terrain_with_hills
 
 
 def noise2d(x, z, seed=0, octaves=4, persistence=0.5):
@@ -97,6 +98,12 @@ class World:
         self.one_block_pos = (0, 64, 0)  # 核心方块位置
         self.blocks_mined = 0  # 已挖掘次数
 
+        # 村庄生成器
+        self.village_generator = VillageGenerator(self.seed)
+
+        # 已生成村庄的区块集合
+        self.village_chunks = set()
+
         # 方块生成阶段
         self.phases = [
             # 阶段1: 基础方块 (0-20)
@@ -149,32 +156,48 @@ class World:
         return chunk
 
     def _generate_one_block_chunk(self, chunk, chunk_x, chunk_z):
-        """生成 One Block 模式的区块"""
+        """生成 One Block 模式的区块 - 带起伏地形和村庄"""
         world_x_offset = chunk_x * CHUNK_SIZE
         world_z_offset = chunk_z * CHUNK_SIZE
 
         obx, oby, obz = self.one_block_pos
         platform_radius = 5000  # 10000x10000 平台 (半径5000)
 
-        for local_x in range(CHUNK_SIZE):
-            for local_z in range(CHUNK_SIZE):
-                world_x = world_x_offset + local_x
-                world_z = world_z_offset + local_z
+        # 首先生成带起伏的地形
+        chunk = generate_terrain_with_hills(chunk, chunk_x, chunk_z, self.seed, oby)
 
-                # 核心方块位置
-                if world_x == obx and world_z == obz:
-                    chunk.blocks[local_x][oby][local_z] = BlockType.GRASS
-
-                # 大平台 (10000x10000)
-                elif abs(world_x - obx) <= platform_radius and abs(world_z - obz) <= platform_radius:
-                    chunk.blocks[local_x][oby][local_z] = BlockType.GRASS  # 改为草方块
+        # 核心方块位置特殊处理
+        if abs(world_x_offset - obx) <= CHUNK_SIZE and abs(world_z_offset - obz) <= CHUNK_SIZE:
+            local_obx = obx - world_x_offset
+            local_obz = obz - world_z_offset
+            if 0 <= local_obx < CHUNK_SIZE and 0 <= local_obz < CHUNK_SIZE:
+                chunk.blocks[local_obx][oby][local_obz] = BlockType.GRASS
+                # 确保核心方块上方是空气
+                for y in range(oby + 1, oby + 5):
+                    chunk.blocks[local_obx][y][local_obz] = BlockType.AIR
 
         # 在平台上生成树木
         self._generate_one_block_trees(chunk, chunk_x, chunk_z, oby)
 
+        # 生成村庄
+        key = (chunk_x, chunk_z)
+        if key not in self.village_chunks:
+            # 不要在核心方块附近生成村庄
+            if abs(chunk_x) > 2 or abs(chunk_z) > 2:
+                # 在特定位置强制生成村庄，确保玩家能看到
+                # 强制在 (3,3), (5,-4), (-4,5) 等位置生成村庄
+                force_village = (
+                    (chunk_x == 3 and chunk_z == 3) or
+                    (chunk_x == 5 and chunk_z == -4) or
+                    (chunk_x == -4 and chunk_z == 5) or
+                    (chunk_x == -5 and chunk_z == -5)
+                )
+                if self.village_generator.generate_village(chunk, chunk_x, chunk_z, oby, force=force_village):
+                    self.village_chunks.add(key)
+
         return chunk
 
-    def _generate_one_block_trees(self, chunk, chunk_x, chunk_z, ground_y):
+    def _generate_one_block_trees(self, chunk, chunk_x, chunk_z, base_ground_y):
         """在 One Block 平台上生成树木"""
         obx, oby, obz = self.one_block_pos
         platform_radius = 5000
@@ -182,8 +205,8 @@ class World:
         # 使用确定性随机数生成器
         tree_random = random.Random(self.seed + chunk_x * 10000 + chunk_z)
 
-        # 每个区块生成 0-2 棵树
-        num_trees = tree_random.randint(0, 2)
+        # 每个区块生成 0-3 棵树
+        num_trees = tree_random.randint(0, 3)
 
         for _ in range(num_trees):
             local_x = tree_random.randint(2, CHUNK_SIZE - 3)
@@ -195,9 +218,12 @@ class World:
             # 检查是否在平台范围内，且不在核心方块附近
             if abs(world_x - obx) <= platform_radius and abs(world_z - obz) <= platform_radius:
                 if abs(world_x - obx) > 3 or abs(world_z - obz) > 3:  # 不在核心方块附近
-                    # 检查地面是否有草方块
-                    if chunk.blocks[local_x][ground_y][local_z] == BlockType.GRASS:
-                        self._place_tree(chunk, local_x, ground_y + 1, local_z, tree_random)
+                    # 寻找该位置的草方块（地形有起伏）
+                    for y in range(base_ground_y + 10, base_ground_y - 10, -1):
+                        if 0 <= y < WORLD_HEIGHT:
+                            if chunk.blocks[local_x][y][local_z] == BlockType.GRASS:
+                                self._place_tree(chunk, local_x, y + 1, local_z, tree_random)
+                                break
 
     def get_next_one_block(self):
         """获取下一个 One Block 方块类型"""
