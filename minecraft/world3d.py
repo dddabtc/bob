@@ -80,9 +80,9 @@ class Chunk:
 
 
 class World:
-    """3D 游戏世界"""
+    """3D 游戏世界 - One Block 模式"""
 
-    def __init__(self, seed=None):
+    def __init__(self, seed=None, one_block_mode=True):
         self.seed = seed if seed is not None else random.randint(0, 999999)
         random.seed(self.seed)
 
@@ -91,6 +91,26 @@ class World:
 
         # 已生成的区块集合
         self.generated_chunks = set()
+
+        # One Block 模式
+        self.one_block_mode = one_block_mode
+        self.one_block_pos = (0, 64, 0)  # 核心方块位置
+        self.blocks_mined = 0  # 已挖掘次数
+
+        # 方块生成阶段
+        self.phases = [
+            # 阶段1: 基础方块 (0-20)
+            [BlockType.DIRT, BlockType.DIRT, BlockType.GRASS, BlockType.STONE, BlockType.COBBLESTONE],
+            # 阶段2: 木材 (21-50)
+            [BlockType.WOOD, BlockType.WOOD, BlockType.PLANKS, BlockType.LEAVES, BlockType.DIRT],
+            # 阶段3: 矿石 (51-100)
+            [BlockType.STONE, BlockType.COAL_ORE, BlockType.IRON_ORE, BlockType.COBBLESTONE, BlockType.GRAVEL],
+            # 阶段4: 稀有矿石 (101-200)
+            [BlockType.STONE, BlockType.IRON_ORE, BlockType.GOLD_ORE, BlockType.COAL_ORE, BlockType.DIAMOND_ORE],
+            # 阶段5: 多样化 (200+)
+            [BlockType.GRASS, BlockType.SAND, BlockType.SNOW, BlockType.BRICK, BlockType.GLASS,
+             BlockType.DIAMOND_ORE, BlockType.GOLD_ORE, BlockType.IRON_ORE],
+        ]
 
     def get_chunk(self, chunk_x, chunk_z):
         """获取或生成区块"""
@@ -103,6 +123,10 @@ class World:
     def _generate_chunk(self, chunk_x, chunk_z):
         """生成单个区块"""
         chunk = Chunk(chunk_x, chunk_z)
+
+        if self.one_block_mode:
+            # One Block 模式 - 只生成核心方块和起始平台
+            return self._generate_one_block_chunk(chunk, chunk_x, chunk_z)
 
         world_x_offset = chunk_x * CHUNK_SIZE
         world_z_offset = chunk_z * CHUNK_SIZE
@@ -123,6 +147,85 @@ class World:
         self._generate_trees(chunk, chunk_x, chunk_z)
 
         return chunk
+
+    def _generate_one_block_chunk(self, chunk, chunk_x, chunk_z):
+        """生成 One Block 模式的区块"""
+        world_x_offset = chunk_x * CHUNK_SIZE
+        world_z_offset = chunk_z * CHUNK_SIZE
+
+        obx, oby, obz = self.one_block_pos
+        platform_radius = 5000  # 10000x10000 平台 (半径5000)
+
+        for local_x in range(CHUNK_SIZE):
+            for local_z in range(CHUNK_SIZE):
+                world_x = world_x_offset + local_x
+                world_z = world_z_offset + local_z
+
+                # 核心方块位置
+                if world_x == obx and world_z == obz:
+                    chunk.blocks[local_x][oby][local_z] = BlockType.GRASS
+
+                # 大平台 (10000x10000)
+                elif abs(world_x - obx) <= platform_radius and abs(world_z - obz) <= platform_radius:
+                    chunk.blocks[local_x][oby][local_z] = BlockType.GRASS  # 改为草方块
+
+        # 在平台上生成树木
+        self._generate_one_block_trees(chunk, chunk_x, chunk_z, oby)
+
+        return chunk
+
+    def _generate_one_block_trees(self, chunk, chunk_x, chunk_z, ground_y):
+        """在 One Block 平台上生成树木"""
+        obx, oby, obz = self.one_block_pos
+        platform_radius = 5000
+
+        # 使用确定性随机数生成器
+        tree_random = random.Random(self.seed + chunk_x * 10000 + chunk_z)
+
+        # 每个区块生成 0-2 棵树
+        num_trees = tree_random.randint(0, 2)
+
+        for _ in range(num_trees):
+            local_x = tree_random.randint(2, CHUNK_SIZE - 3)
+            local_z = tree_random.randint(2, CHUNK_SIZE - 3)
+
+            world_x = chunk_x * CHUNK_SIZE + local_x
+            world_z = chunk_z * CHUNK_SIZE + local_z
+
+            # 检查是否在平台范围内，且不在核心方块附近
+            if abs(world_x - obx) <= platform_radius and abs(world_z - obz) <= platform_radius:
+                if abs(world_x - obx) > 3 or abs(world_z - obz) > 3:  # 不在核心方块附近
+                    # 检查地面是否有草方块
+                    if chunk.blocks[local_x][ground_y][local_z] == BlockType.GRASS:
+                        self._place_tree(chunk, local_x, ground_y + 1, local_z, tree_random)
+
+    def get_next_one_block(self):
+        """获取下一个 One Block 方块类型"""
+        # 根据挖掘次数决定阶段
+        if self.blocks_mined < 20:
+            phase = 0
+        elif self.blocks_mined < 50:
+            phase = 1
+        elif self.blocks_mined < 100:
+            phase = 2
+        elif self.blocks_mined < 200:
+            phase = 3
+        else:
+            phase = 4
+
+        blocks = self.phases[phase]
+        return random.choice(blocks)
+
+    def respawn_one_block(self):
+        """在核心位置重新生成方块"""
+        if not self.one_block_mode:
+            return
+
+        obx, oby, obz = self.one_block_pos
+        new_block = self.get_next_one_block()
+        self.set_block(obx, oby, obz, new_block)
+        self.blocks_mined += 1
+        return new_block
 
     def _get_terrain_height(self, x, z):
         """获取地形高度"""
@@ -242,8 +345,9 @@ class World:
         if y < 0 or y >= WORLD_HEIGHT:
             return BlockType.AIR
 
-        chunk_x = x // CHUNK_SIZE if x >= 0 else (x + 1) // CHUNK_SIZE - 1
-        chunk_z = z // CHUNK_SIZE if z >= 0 else (z + 1) // CHUNK_SIZE - 1
+        # Python的整除对负数是向下取整，所以直接用 // 即可
+        chunk_x = math.floor(x / CHUNK_SIZE)
+        chunk_z = math.floor(z / CHUNK_SIZE)
 
         local_x = x - chunk_x * CHUNK_SIZE
         local_z = z - chunk_z * CHUNK_SIZE
@@ -259,21 +363,43 @@ class World:
         if y < 0 or y >= WORLD_HEIGHT:
             return False
 
-        chunk_x = x // CHUNK_SIZE if x >= 0 else (x + 1) // CHUNK_SIZE - 1
-        chunk_z = z // CHUNK_SIZE if z >= 0 else (z + 1) // CHUNK_SIZE - 1
+        # 使用 math.floor 正确处理负坐标
+        chunk_x = math.floor(x / CHUNK_SIZE)
+        chunk_z = math.floor(z / CHUNK_SIZE)
 
         local_x = x - chunk_x * CHUNK_SIZE
         local_z = z - chunk_z * CHUNK_SIZE
 
         key = (chunk_x, chunk_z)
         if key in self.chunks:
-            return self.chunks[key].set_block(local_x, y, local_z, block_type)
+            result = self.chunks[key].set_block(local_x, y, local_z, block_type)
+
+            # 如果方块在区块边缘，也标记相邻区块为脏
+            if local_x == 0:
+                adj_key = (chunk_x - 1, chunk_z)
+                if adj_key in self.chunks:
+                    self.chunks[adj_key].dirty = True
+            if local_x == CHUNK_SIZE - 1:
+                adj_key = (chunk_x + 1, chunk_z)
+                if adj_key in self.chunks:
+                    self.chunks[adj_key].dirty = True
+            if local_z == 0:
+                adj_key = (chunk_x, chunk_z - 1)
+                if adj_key in self.chunks:
+                    self.chunks[adj_key].dirty = True
+            if local_z == CHUNK_SIZE - 1:
+                adj_key = (chunk_x, chunk_z + 1)
+                if adj_key in self.chunks:
+                    self.chunks[adj_key].dirty = True
+
+            return result
 
         return False
 
     def is_solid(self, x, y, z):
         """检查方块是否为固体"""
-        block = self.get_block(int(x), int(y), int(z))
+        # 使用 math.floor 正确处理负坐标
+        block = self.get_block(int(math.floor(x)), int(math.floor(y)), int(math.floor(z)))
         return BLOCK_DATA.get(block, {}).get('solid', False)
 
     def get_chunks_around(self, center_x, center_z, distance):
@@ -287,13 +413,28 @@ class World:
 
     def find_spawn_point(self):
         """找到合适的出生点"""
-        # 从原点附近找
-        for x in range(0, 50):
-            for z in range(0, 50):
+        if self.one_block_mode:
+            # One Block 模式 - 在核心方块上方出生
+            obx, oby, obz = self.one_block_pos
+            # 确保区块已生成
+            chunk_x = math.floor(obx / CHUNK_SIZE)
+            chunk_z = math.floor(obz / CHUNK_SIZE)
+            for dx in range(-1, 2):
+                for dz in range(-1, 2):
+                    self.get_chunk(chunk_x + dx, chunk_z + dz)
+            return (obx + 0.5, oby + 2, obz + 0.5)
+
+        # 普通模式 - 从世界中心附近找
+        center = CHUNK_SIZE * 2
+        for x in range(center, center + 50):
+            for z in range(center, center + 50):
                 height = self._get_terrain_height(x, z)
                 if height > SEA_LEVEL + 2:
-                    # 确保区块已生成
-                    self.get_chunk(x // CHUNK_SIZE, z // CHUNK_SIZE)
+                    chunk_x = math.floor(x / CHUNK_SIZE)
+                    chunk_z = math.floor(z / CHUNK_SIZE)
+                    for dx in range(-1, 2):
+                        for dz in range(-1, 2):
+                            self.get_chunk(chunk_x + dx, chunk_z + dz)
                     return (x + 0.5, height + 2, z + 0.5)
 
-        return (8.5, GROUND_LEVEL + 10, 8.5)
+        return (center + 8.5, GROUND_LEVEL + 10, center + 8.5)

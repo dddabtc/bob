@@ -25,7 +25,7 @@ class Player:
 
         # 视角 (弧度)
         self.yaw = 0      # 水平旋转
-        self.pitch = 0    # 垂直旋转
+        self.pitch = 0.8  # 垂直旋转 (向下看，方便看到方块)
 
         # 尺寸
         self.width = PLAYER_WIDTH
@@ -174,6 +174,10 @@ class Player:
         # 应用移动
         self._move_with_collision(world, dt)
 
+        # 检查是否掉入虚空
+        if self.y < -10:
+            self.respawn(world)
+
         # 更新冷却
         if self.place_cooldown > 0:
             self.place_cooldown -= dt
@@ -215,10 +219,18 @@ class Player:
         min_z = self.z - half_width
         max_z = self.z + half_width
 
+        # 使用 math.floor 正确处理负坐标
+        start_x = int(math.floor(min_x))
+        end_x = int(math.floor(max_x))
+        start_y = int(math.floor(min_y))
+        end_y = int(math.floor(max_y))
+        start_z = int(math.floor(min_z))
+        end_z = int(math.floor(max_z))
+
         # 检查所有可能碰撞的方块
-        for bx in range(int(min_x), int(max_x) + 1):
-            for by in range(int(min_y), int(max_y) + 1):
-                for bz in range(int(min_z), int(max_z) + 1):
+        for bx in range(start_x, end_x + 1):
+            for by in range(start_y, end_y + 1):
+                for bz in range(start_z, end_z + 1):
                     if world.is_solid(bx, by, bz):
                         # AABB碰撞检测
                         if (min_x < bx + 1 and max_x > bx and
@@ -234,24 +246,32 @@ class Player:
 
         # 射线步进
         step = 0.05
+        prev_bx, prev_by, prev_bz = None, None, None
+
         for i in range(int(max_distance / step)):
             t = i * step
             x = cam_x + dir_x * t
             y = cam_y + dir_y * t
             z = cam_z + dir_z * t
 
-            bx, by, bz = int(x), int(y), int(z)
+            # 使用 math.floor 处理负坐标
+            bx = int(math.floor(x))
+            by = int(math.floor(y))
+            bz = int(math.floor(z))
+
             block = world.get_block(bx, by, bz)
 
             if block != BlockType.AIR and block != BlockType.WATER:
-                # 找到方块，计算放置位置
-                # 回退一步找到空位
-                prev_t = (i - 1) * step
-                px = int(cam_x + dir_x * prev_t)
-                py = int(cam_y + dir_y * prev_t)
-                pz = int(cam_z + dir_z * prev_t)
+                # 找到方块
+                # 放置位置是上一个空位
+                if prev_bx is not None:
+                    place_pos = (prev_bx, prev_by, prev_bz)
+                else:
+                    place_pos = None
+                return (bx, by, bz), place_pos
 
-                return (bx, by, bz), (px, py, pz)
+            # 记录上一个空位
+            prev_bx, prev_by, prev_bz = bx, by, bz
 
         return None, None
 
@@ -299,6 +319,14 @@ class Player:
             # 挖掘完成
             drop = BLOCK_DROPS.get(block, block)
             world.set_block(bx, by, bz, BlockType.AIR)
+
+            # One Block 模式 - 检查是否挖掘了核心方块
+            if world.one_block_mode:
+                obx, oby, obz = world.one_block_pos
+                if bx == obx and by == oby and bz == obz:
+                    # 重新生成核心方块
+                    world.respawn_one_block()
+
             self.stop_mining()
             return drop
 
@@ -382,3 +410,25 @@ class Player:
     def scroll_slot(self, direction):
         """滚轮切换槽位"""
         self.selected_slot = (self.selected_slot - direction) % HOTBAR_SLOTS
+
+    def respawn(self, world):
+        """重生玩家"""
+        # 获取出生点
+        spawn = world.find_spawn_point()
+        self.x = spawn[0]
+        self.y = spawn[1]
+        self.z = spawn[2]
+
+        # 重置速度
+        self.vx = 0
+        self.vy = 0
+        self.vz = 0
+
+        # 重置状态
+        self.on_ground = False
+        self.is_mining = False
+        self.mining_target = None
+        self.mining_progress = 0
+
+        # 恢复生命值
+        self.health = self.max_health

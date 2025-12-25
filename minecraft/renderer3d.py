@@ -23,9 +23,8 @@ class Renderer:
         glEnable(GL_DEPTH_TEST)
         glDepthFunc(GL_LESS)
 
-        # 启用面剔除
-        glEnable(GL_CULL_FACE)
-        glCullFace(GL_BACK)
+        # 禁用面剔除（调试用）
+        glDisable(GL_CULL_FACE)
 
         # 启用混合 (透明)
         glEnable(GL_BLEND)
@@ -40,22 +39,11 @@ class Renderer:
         gluPerspective(FOV, WINDOW_WIDTH / WINDOW_HEIGHT, NEAR_PLANE, FAR_PLANE)
         glMatrixMode(GL_MODELVIEW)
 
-        # 简单光照
-        glEnable(GL_LIGHTING)
-        glEnable(GL_LIGHT0)
-        glLightfv(GL_LIGHT0, GL_POSITION, [0.5, 1.0, 0.3, 0.0])
-        glLightfv(GL_LIGHT0, GL_AMBIENT, [0.4, 0.4, 0.4, 1.0])
-        glLightfv(GL_LIGHT0, GL_DIFFUSE, [0.8, 0.8, 0.8, 1.0])
+        # 禁用光照（使用顶点颜色）
+        glDisable(GL_LIGHTING)
 
-        glEnable(GL_COLOR_MATERIAL)
-        glColorMaterial(GL_FRONT, GL_AMBIENT_AND_DIFFUSE)
-
-        # 雾效果 (远处渐隐)
-        glEnable(GL_FOG)
-        glFogi(GL_FOG_MODE, GL_LINEAR)
-        glFogfv(GL_FOG_COLOR, [0.53, 0.81, 0.92, 1.0])
-        glFogf(GL_FOG_START, RENDER_DISTANCE * CHUNK_SIZE * 0.6)
-        glFogf(GL_FOG_END, RENDER_DISTANCE * CHUNK_SIZE)
+        # 禁用雾效果
+        glDisable(GL_FOG)
 
     def set_camera(self, player):
         """设置摄像机"""
@@ -80,66 +68,317 @@ class Renderer:
         """渲染世界"""
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
+        # 确保正确的渲染状态
+        glDisable(GL_LIGHTING)
+        glDisable(GL_FOG)
+        glEnable(GL_DEPTH_TEST)
+
         self.set_camera(player)
 
         # 获取玩家所在区块
-        player_chunk_x = int(player.x) // CHUNK_SIZE
-        player_chunk_z = int(player.z) // CHUNK_SIZE
+        player_chunk_x = math.floor(player.x / CHUNK_SIZE)
+        player_chunk_z = math.floor(player.z / CHUNK_SIZE)
 
         # 渲染周围区块
-        chunks = world.get_chunks_around(player_chunk_x, player_chunk_z, RENDER_DISTANCE)
-
-        # 先渲染不透明方块
-        for chunk in chunks:
-            self._render_chunk(chunk, world, transparent=False)
-
-        # 再渲染透明方块
-        glDepthMask(GL_FALSE)
-        for chunk in chunks:
-            self._render_chunk(chunk, world, transparent=True)
-        glDepthMask(GL_TRUE)
+        for dx in range(-RENDER_DISTANCE, RENDER_DISTANCE + 1):
+            for dz in range(-RENDER_DISTANCE, RENDER_DISTANCE + 1):
+                chunk_x = player_chunk_x + dx
+                chunk_z = player_chunk_z + dz
+                key = (chunk_x, chunk_z)
+                if key in world.chunks:
+                    chunk = world.chunks[key]
+                    self._render_chunk_cached(chunk, world)
 
         # 渲染选中方块高亮
         self._render_block_highlight(player, world)
+
+    def _render_chunk_cached(self, chunk, world):
+        """使用缓存渲染区块"""
+        # 如果区块是脏的，重建显示列表
+        if chunk.dirty or not hasattr(chunk, 'display_list') or chunk.display_list is None:
+            self._build_chunk_display_list(chunk, world)
+            chunk.dirty = False
+
+        # 调用显示列表
+        if hasattr(chunk, 'display_list') and chunk.display_list is not None:
+            glCallList(chunk.display_list)
+
+    def _build_chunk_display_list(self, chunk, world):
+        """构建区块的显示列表"""
+        # 删除旧的显示列表
+        if hasattr(chunk, 'display_list') and chunk.display_list is not None:
+            glDeleteLists(chunk.display_list, 1)
+
+        chunk.display_list = glGenLists(1)
+        glNewList(chunk.display_list, GL_COMPILE)
+
+        world_x = chunk.chunk_x * CHUNK_SIZE
+        world_z = chunk.chunk_z * CHUNK_SIZE
+
+        glBegin(GL_QUADS)
+        for x in range(CHUNK_SIZE):
+            for z in range(CHUNK_SIZE):
+                for y in range(WORLD_HEIGHT):
+                    block = chunk.blocks[x][y][z]
+                    if block == BlockType.AIR or block == BlockType.WATER:
+                        continue
+
+                    wx, wz = world_x + x, world_z + z
+
+                    # 检查6个面
+                    # 上面
+                    if y == WORLD_HEIGHT - 1 or chunk.blocks[x][y+1][z] == BlockType.AIR or chunk.blocks[x][y+1][z] == BlockType.WATER:
+                        self._add_face_vertices(wx, y, wz, 'top', block)
+                    # 下面
+                    if y == 0 or chunk.blocks[x][y-1][z] == BlockType.AIR or chunk.blocks[x][y-1][z] == BlockType.WATER:
+                        self._add_face_vertices(wx, y, wz, 'bottom', block)
+                    # 前面 (Z-)
+                    if z == 0:
+                        neighbor = world.get_block(wx, y, wz - 1)
+                    else:
+                        neighbor = chunk.blocks[x][y][z-1]
+                    if neighbor == BlockType.AIR or neighbor == BlockType.WATER:
+                        self._add_face_vertices(wx, y, wz, 'front', block)
+                    # 后面 (Z+)
+                    if z == CHUNK_SIZE - 1:
+                        neighbor = world.get_block(wx, y, wz + 1)
+                    else:
+                        neighbor = chunk.blocks[x][y][z+1]
+                    if neighbor == BlockType.AIR or neighbor == BlockType.WATER:
+                        self._add_face_vertices(wx, y, wz, 'back', block)
+                    # 左面 (X-)
+                    if x == 0:
+                        neighbor = world.get_block(wx - 1, y, wz)
+                    else:
+                        neighbor = chunk.blocks[x-1][y][z]
+                    if neighbor == BlockType.AIR or neighbor == BlockType.WATER:
+                        self._add_face_vertices(wx, y, wz, 'left', block)
+                    # 右面 (X+)
+                    if x == CHUNK_SIZE - 1:
+                        neighbor = world.get_block(wx + 1, y, wz)
+                    else:
+                        neighbor = chunk.blocks[x+1][y][z]
+                    if neighbor == BlockType.AIR or neighbor == BlockType.WATER:
+                        self._add_face_vertices(wx, y, wz, 'right', block)
+
+        glEnd()
+        glEndList()
+
+    def _add_face_vertices(self, x, y, z, face, block_type):
+        """添加一个面的顶点到当前GL_QUADS"""
+        colors = BLOCK_COLORS.get(block_type, {'all': (0.5, 0.5, 0.5)})
+        if 'all' in colors:
+            c = colors['all'][:3]
+        else:
+            if face == 'top':
+                c = colors.get('top', (0.5, 0.5, 0.5))[:3]
+            elif face == 'bottom':
+                c = colors.get('bottom', colors.get('top', (0.5, 0.5, 0.5)))[:3]
+            else:
+                c = colors.get('side', colors.get('top', (0.5, 0.5, 0.5)))[:3]
+
+        # 光照调整
+        if face == 'top':
+            light = 1.0
+        elif face == 'bottom':
+            light = 0.5
+        elif face in ('front', 'back'):
+            light = 0.85
+        else:
+            light = 0.7
+
+        glColor3f(c[0] * light, c[1] * light, c[2] * light)
+
+        if face == 'top':
+            glVertex3f(x, y+1, z)
+            glVertex3f(x+1, y+1, z)
+            glVertex3f(x+1, y+1, z+1)
+            glVertex3f(x, y+1, z+1)
+        elif face == 'bottom':
+            glVertex3f(x, y, z+1)
+            glVertex3f(x+1, y, z+1)
+            glVertex3f(x+1, y, z)
+            glVertex3f(x, y, z)
+        elif face == 'front':
+            glVertex3f(x, y, z)
+            glVertex3f(x+1, y, z)
+            glVertex3f(x+1, y+1, z)
+            glVertex3f(x, y+1, z)
+        elif face == 'back':
+            glVertex3f(x+1, y, z+1)
+            glVertex3f(x, y, z+1)
+            glVertex3f(x, y+1, z+1)
+            glVertex3f(x+1, y+1, z+1)
+        elif face == 'left':
+            glVertex3f(x, y, z+1)
+            glVertex3f(x, y, z)
+            glVertex3f(x, y+1, z)
+            glVertex3f(x, y+1, z+1)
+        elif face == 'right':
+            glVertex3f(x+1, y, z)
+            glVertex3f(x+1, y, z+1)
+            glVertex3f(x+1, y+1, z+1)
+            glVertex3f(x+1, y+1, z)
+
+    def _render_block(self, x, y, z, block_type):
+        """渲染单个方块"""
+        colors = BLOCK_COLORS.get(block_type, {'all': (0.5, 0.5, 0.5)})
+
+        if 'all' in colors:
+            top_color = side_color = bottom_color = colors['all'][:3]
+        else:
+            top_color = colors.get('top', (0.5, 0.5, 0.5))[:3]
+            bottom_color = colors.get('bottom', top_color)[:3]
+            side_color = colors.get('side', top_color)[:3]
+
+        glBegin(GL_QUADS)
+
+        # 上面 - 亮度 1.0
+        glColor3f(top_color[0], top_color[1], top_color[2])
+        glVertex3f(x, y+1, z)
+        glVertex3f(x+1, y+1, z)
+        glVertex3f(x+1, y+1, z+1)
+        glVertex3f(x, y+1, z+1)
+
+        # 下面 - 亮度 0.5
+        glColor3f(bottom_color[0]*0.5, bottom_color[1]*0.5, bottom_color[2]*0.5)
+        glVertex3f(x, y, z+1)
+        glVertex3f(x+1, y, z+1)
+        glVertex3f(x+1, y, z)
+        glVertex3f(x, y, z)
+
+        # 前面 (Z-) - 亮度 0.85
+        glColor3f(side_color[0]*0.85, side_color[1]*0.85, side_color[2]*0.85)
+        glVertex3f(x, y, z)
+        glVertex3f(x+1, y, z)
+        glVertex3f(x+1, y+1, z)
+        glVertex3f(x, y+1, z)
+
+        # 后面 (Z+) - 亮度 0.85
+        glColor3f(side_color[0]*0.85, side_color[1]*0.85, side_color[2]*0.85)
+        glVertex3f(x+1, y, z+1)
+        glVertex3f(x, y, z+1)
+        glVertex3f(x, y+1, z+1)
+        glVertex3f(x+1, y+1, z+1)
+
+        # 左面 (X-) - 亮度 0.7
+        glColor3f(side_color[0]*0.7, side_color[1]*0.7, side_color[2]*0.7)
+        glVertex3f(x, y, z+1)
+        glVertex3f(x, y, z)
+        glVertex3f(x, y+1, z)
+        glVertex3f(x, y+1, z+1)
+
+        # 右面 (X+) - 亮度 0.75
+        glColor3f(side_color[0]*0.75, side_color[1]*0.75, side_color[2]*0.75)
+        glVertex3f(x+1, y, z)
+        glVertex3f(x+1, y, z+1)
+        glVertex3f(x+1, y+1, z+1)
+        glVertex3f(x+1, y+1, z)
+
+        glEnd()
+
+    def _render_test_cube(self, x, y, z):
+        """渲染测试立方体 - 草方块样式"""
+        glBegin(GL_QUADS)
+        # 上面 - 草绿色
+        glColor3f(0.4, 0.75, 0.25)
+        glVertex3f(x, y+1, z)
+        glVertex3f(x+1, y+1, z)
+        glVertex3f(x+1, y+1, z+1)
+        glVertex3f(x, y+1, z+1)
+        # 下面 - 泥土
+        glColor3f(0.55, 0.35, 0.18)
+        glVertex3f(x, y, z+1)
+        glVertex3f(x+1, y, z+1)
+        glVertex3f(x+1, y, z)
+        glVertex3f(x, y, z)
+        # 前面 (Z-) - 泥土带草边
+        glColor3f(0.5, 0.32, 0.15)
+        glVertex3f(x, y, z)
+        glVertex3f(x+1, y, z)
+        glVertex3f(x+1, y+1, z)
+        glVertex3f(x, y+1, z)
+        # 后面 (Z+)
+        glColor3f(0.48, 0.3, 0.14)
+        glVertex3f(x+1, y, z+1)
+        glVertex3f(x, y, z+1)
+        glVertex3f(x, y+1, z+1)
+        glVertex3f(x+1, y+1, z+1)
+        # 左面 (X-)
+        glColor3f(0.45, 0.28, 0.13)
+        glVertex3f(x, y, z+1)
+        glVertex3f(x, y, z)
+        glVertex3f(x, y+1, z)
+        glVertex3f(x, y+1, z+1)
+        # 右面 (X+)
+        glColor3f(0.52, 0.33, 0.16)
+        glVertex3f(x+1, y, z)
+        glVertex3f(x+1, y, z+1)
+        glVertex3f(x+1, y+1, z+1)
+        glVertex3f(x+1, y+1, z)
+        glEnd()
 
     def _render_chunk(self, chunk, world, transparent=False):
         """渲染单个区块"""
         if chunk.dirty:
             self._build_chunk_mesh(chunk, world)
+            self._build_display_list(chunk)
             chunk.dirty = False
 
-        if chunk.vertex_count == 0:
-            return
+        # 使用显示列表渲染
+        if transparent:
+            if hasattr(chunk, 'trans_display_list') and chunk.trans_display_list:
+                glCallList(chunk.trans_display_list)
+        else:
+            if hasattr(chunk, 'display_list') and chunk.display_list:
+                glCallList(chunk.display_list)
 
+    def _build_display_list(self, chunk):
+        """构建显示列表"""
         world_x = chunk.chunk_x * CHUNK_SIZE
         world_z = chunk.chunk_z * CHUNK_SIZE
 
-        glPushMatrix()
-        glTranslatef(world_x, 0, world_z)
+        # 不透明方块显示列表
+        if chunk.vertex_count > 0:
+            chunk.display_list = glGenLists(1)
+            glNewList(chunk.display_list, GL_COMPILE)
 
-        # 使用顶点数组渲染
-        glEnableClientState(GL_VERTEX_ARRAY)
-        glEnableClientState(GL_COLOR_ARRAY)
-        glEnableClientState(GL_NORMAL_ARRAY)
+            glPushMatrix()
+            glTranslatef(world_x, 0, world_z)
+            glBegin(GL_QUADS)
+            for i in range(0, chunk.vertex_count * 3, 3):
+                ci = (i // 3) * 4
+                glColor4f(chunk.mesh_colors[ci], chunk.mesh_colors[ci+1],
+                         chunk.mesh_colors[ci+2], chunk.mesh_colors[ci+3])
+                glVertex3f(chunk.mesh_vertices[i], chunk.mesh_vertices[i+1],
+                          chunk.mesh_vertices[i+2])
+            glEnd()
+            glPopMatrix()
 
-        if transparent:
-            if hasattr(chunk, 'trans_vertices') and chunk.trans_vertex_count > 0:
-                glVertexPointer(3, GL_FLOAT, 0, chunk.trans_vertices)
-                glColorPointer(4, GL_FLOAT, 0, chunk.trans_colors)
-                glNormalPointer(GL_FLOAT, 0, chunk.trans_normals)
-                glDrawArrays(GL_QUADS, 0, chunk.trans_vertex_count)
+            glEndList()
         else:
-            if chunk.vertex_count > 0:
-                glVertexPointer(3, GL_FLOAT, 0, chunk.mesh_vertices)
-                glColorPointer(4, GL_FLOAT, 0, chunk.mesh_colors)
-                glNormalPointer(GL_FLOAT, 0, chunk.mesh_normals)
-                glDrawArrays(GL_QUADS, 0, chunk.vertex_count)
+            chunk.display_list = None
 
-        glDisableClientState(GL_VERTEX_ARRAY)
-        glDisableClientState(GL_COLOR_ARRAY)
-        glDisableClientState(GL_NORMAL_ARRAY)
+        # 透明方块显示列表
+        if chunk.trans_vertex_count > 0:
+            chunk.trans_display_list = glGenLists(1)
+            glNewList(chunk.trans_display_list, GL_COMPILE)
 
-        glPopMatrix()
+            glPushMatrix()
+            glTranslatef(world_x, 0, world_z)
+            glBegin(GL_QUADS)
+            for i in range(0, chunk.trans_vertex_count * 3, 3):
+                ci = (i // 3) * 4
+                glColor4f(chunk.trans_colors[ci], chunk.trans_colors[ci+1],
+                         chunk.trans_colors[ci+2], chunk.trans_colors[ci+3])
+                glVertex3f(chunk.trans_vertices[i], chunk.trans_vertices[i+1],
+                          chunk.trans_vertices[i+2])
+            glEnd()
+            glPopMatrix()
+
+            glEndList()
+        else:
+            chunk.trans_display_list = None
 
     def _build_chunk_mesh(self, chunk, world):
         """构建区块网格"""
@@ -375,8 +614,7 @@ class Renderer:
         glEnd()
 
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
-        glEnable(GL_LIGHTING)
-        glEnable(GL_FOG)
+        # 保持光照和雾禁用（我们使用顶点颜色）
 
 
 def render_crosshair(screen):

@@ -10,8 +10,8 @@ TITLE = "Minecraft 3D"
 BLOCK_SIZE = 1.0
 
 # 区块设置
-CHUNK_SIZE = 16  # 16x16x16 方块
-RENDER_DISTANCE = 4  # 渲染距离（区块数）
+CHUNK_SIZE = 16  # 16x16x128 方块
+RENDER_DISTANCE = 2  # 渲染距离（区块数）- 降低以提高性能
 
 # 世界设置
 WORLD_HEIGHT = 128
@@ -74,7 +74,7 @@ BLOCK_COLORS = {
     BlockType.GRASS: {
         'top': (0.4, 0.8, 0.3),
         'bottom': (0.55, 0.35, 0.17),
-        'side': (0.55, 0.35, 0.17, 0.4, 0.7, 0.3),  # 下半泥土，上半草
+        'side': (0.5, 0.4, 0.25),  # 棕绿混合色
     },
     BlockType.DIRT: {
         'all': (0.55, 0.35, 0.17),

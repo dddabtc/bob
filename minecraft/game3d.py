@@ -18,6 +18,7 @@ Minecraft 3D - 一个用Python、Pygame和OpenGL制作的3D Minecraft风格游�
 
 import sys
 import os
+import math
 
 # 添加当前目录到路径
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -29,12 +30,12 @@ from OpenGL.GLU import *
 
 from settings3d import (
     WINDOW_WIDTH, WINDOW_HEIGHT, FPS, TITLE,
-    RENDER_DISTANCE, CHUNK_SIZE
+    RENDER_DISTANCE, CHUNK_SIZE, FOV, NEAR_PLANE, FAR_PLANE
 )
 from world3d import World
 from player3d import Player
 from renderer3d import Renderer
-from hud3d import HUD, PauseMenu
+from hud3d import HUD, PauseMenu, InventoryScreen
 
 
 class Game:
@@ -52,6 +53,7 @@ class Game:
         self.clock = pygame.time.Clock()
         self.running = True
         self.paused = False
+        self.inventory_open = False
         self.debug_mode = False
 
         # 鼠标锁定
@@ -86,6 +88,7 @@ class Game:
         # 创建HUD
         self.hud = HUD()
         self.pause_menu = PauseMenu()
+        self.inventory_screen = InventoryScreen()
 
         print("游戏启动完成!")
 
@@ -101,7 +104,7 @@ class Game:
 
             self._handle_events()
 
-            if not self.paused:
+            if not self.paused and not self.inventory_open:
                 self._update(dt)
 
             self._render()
@@ -118,7 +121,10 @@ class Game:
                 self._handle_keydown(event)
 
             elif event.type == MOUSEBUTTONDOWN:
-                if not self.paused:
+                if self.inventory_open:
+                    mx, my = pygame.mouse.get_pos()
+                    self.inventory_screen.handle_click(mx, my, self.player)
+                elif not self.paused:
                     self._handle_mousedown(event)
 
             elif event.type == MOUSEBUTTONUP:
@@ -126,7 +132,7 @@ class Game:
                     self.player.stop_mining()
 
             elif event.type == MOUSEMOTION:
-                if not self.paused:
+                if not self.paused and not self.inventory_open:
                     self.player.handle_mouse_motion(event.rel[0], event.rel[1])
 
             elif event.type == MOUSEWHEEL:
@@ -136,7 +142,11 @@ class Game:
     def _handle_keydown(self, event):
         """处理按键"""
         if event.key == K_ESCAPE:
-            if self.paused:
+            if self.inventory_open:
+                self.inventory_open = False
+                pygame.mouse.set_visible(False)
+                pygame.event.set_grab(True)
+            elif self.paused:
                 self.paused = False
                 pygame.mouse.set_visible(False)
                 pygame.event.set_grab(True)
@@ -144,6 +154,17 @@ class Game:
                 self.paused = True
                 pygame.mouse.set_visible(True)
                 pygame.event.set_grab(False)
+
+        elif event.key == K_e:
+            # 打开/关闭背包
+            if not self.paused:
+                self.inventory_open = not self.inventory_open
+                if self.inventory_open:
+                    pygame.mouse.set_visible(True)
+                    pygame.event.set_grab(False)
+                else:
+                    pygame.mouse.set_visible(False)
+                    pygame.event.set_grab(True)
 
         elif event.key == K_q and self.paused:
             self.running = False
@@ -180,12 +201,23 @@ class Game:
                 self.player.add_item(drop)
 
         # 加载新区块
-        player_chunk_x = int(self.player.x) // CHUNK_SIZE
-        player_chunk_z = int(self.player.z) // CHUNK_SIZE
+        player_chunk_x = math.floor(self.player.x / CHUNK_SIZE)
+        player_chunk_z = math.floor(self.player.z / CHUNK_SIZE)
         self.world.get_chunks_around(player_chunk_x, player_chunk_z, RENDER_DISTANCE)
 
     def _render(self):
         """渲染画面"""
+        # 确保正确的 OpenGL 状态用于 3D 渲染
+        glMatrixMode(GL_PROJECTION)
+        glLoadIdentity()
+        gluPerspective(FOV, WINDOW_WIDTH / WINDOW_HEIGHT, NEAR_PLANE, FAR_PLANE)
+        glMatrixMode(GL_MODELVIEW)
+        glLoadIdentity()
+
+        glEnable(GL_DEPTH_TEST)
+        glDisable(GL_LIGHTING)
+        glDisable(GL_FOG)
+
         # 3D渲染
         self.renderer.render_world(self.world, self.player)
 
@@ -197,11 +229,15 @@ class Game:
 
         # 渲染HUD
         fps = self.clock.get_fps()
-        self.hud.render(self.hud_surface, self.player, fps, self.debug_mode)
+        self.hud.render(self.hud_surface, self.player, fps, self.debug_mode, self.world)
 
         # 挖掘进度
         if self.player.is_mining:
             self.hud.render_mining_progress(self.hud_surface, self.player.mining_progress)
+
+        # 背包界面
+        if self.inventory_open:
+            self.inventory_screen.render(self.hud_surface, self.player)
 
         # 暂停菜单
         if self.paused:
@@ -237,13 +273,14 @@ class Game:
         glPopMatrix()
 
         glEnable(GL_DEPTH_TEST)
-        glEnable(GL_LIGHTING)
-        glEnable(GL_FOG)
+        # 不启用光照和雾 - 我们使用顶点颜色
+        glDisable(GL_LIGHTING)
+        glDisable(GL_FOG)
 
     def _draw_hud_surface(self):
         """将pygame表面绘制到OpenGL"""
-        # 获取表面数据
-        texture_data = pygame.image.tostring(self.hud_surface, "RGBA", True)
+        # 获取表面数据 (False = 不翻转)
+        texture_data = pygame.image.tostring(self.hud_surface, "RGBA", False)
 
         # 创建纹理
         glEnable(GL_TEXTURE_2D)
