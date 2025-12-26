@@ -7,6 +7,7 @@ from settings3d import (
     MINING_RANGE, PLACE_RANGE, BlockType, BLOCK_DATA, BLOCK_DROPS,
     HOTBAR_SLOTS, INVENTORY_ROWS, INVENTORY_COLS
 )
+from gun import Gun
 
 
 class Player:
@@ -54,20 +55,17 @@ class Player:
         self.inventory = [None] * total_slots
         self.selected_slot = 0
 
-        # 初始物品
+        # 枪械系统 - 无限子弹
+        self.gun = Gun()
+
+        # 初始物品（玩家一开始只有枪）
         self._give_starter_items()
 
     def _give_starter_items(self):
-        """给予初始物品"""
-        self.inventory[0] = (BlockType.GRASS, 64)
-        self.inventory[1] = (BlockType.DIRT, 64)
-        self.inventory[2] = (BlockType.STONE, 64)
-        self.inventory[3] = (BlockType.WOOD, 64)
-        self.inventory[4] = (BlockType.PLANKS, 64)
-        self.inventory[5] = (BlockType.GLASS, 64)
-        self.inventory[6] = (BlockType.BRICK, 64)
-        self.inventory[7] = (BlockType.COBBLESTONE, 64)
-        self.inventory[8] = (BlockType.SAND, 64)
+        """给予初始物品 - 玩家只有一把枪，无限子弹"""
+        # 不给予方块，玩家只有枪
+        # 背包保持为空，枪是独立系统
+        pass
 
     def get_camera_position(self):
         """获取摄像机位置 (眼睛位置)"""
@@ -410,6 +408,37 @@ class Player:
     def scroll_slot(self, direction):
         """滚轮切换槽位"""
         self.selected_slot = (self.selected_slot - direction) % HOTBAR_SLOTS
+
+    def take_damage(self, damage):
+        """受到伤害"""
+        self.health -= damage
+        if self.health < 0:
+            self.health = 0
+        return self.health <= 0  # 返回是否死亡
+
+    def heal(self, amount):
+        """恢复生命值"""
+        self.health = min(self.health + amount, self.max_health)
+
+    def is_dead(self):
+        """检查是否死亡"""
+        return self.health <= 0
+
+    def shoot(self):
+        """使用枪射击"""
+        return self.gun.shoot(self)
+
+    def update_gun(self, world, zombie_manager, dt):
+        """更新枪状态"""
+        self.gun.update(world, zombie_manager, dt)
+
+    def attack(self, zombie_manager):
+        """攻击前方的僵尸（射击）"""
+        # 使用枪射击
+        bullet = self.shoot()
+        if bullet:
+            return 1  # 返回射击成功
+        return 0
 
     def respawn(self, world):
         """重生玩家"""

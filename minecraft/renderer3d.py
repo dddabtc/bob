@@ -1,5 +1,6 @@
 # 3D OpenGL 渲染器
 import math
+import random
 import numpy as np
 from OpenGL.GL import *
 from OpenGL.GLU import *
@@ -10,12 +11,28 @@ from settings3d import (
     BlockType, BLOCK_DATA, BLOCK_COLORS
 )
 
+# 雾效果设置
+FOG_START = 30.0  # 雾开始距离
+FOG_END = 80.0    # 雾结束距离（完全不透明）
+FOG_COLOR = (0.75, 0.85, 0.95, 1.0)  # 淡蓝色天空雾（默认白天）
+
+# 云层设置
+CLOUD_HEIGHT = 100  # 云的高度
+CLOUD_SIZE = 8      # 每朵云的大小
+
+# 当前光照强度（由昼夜循环更新）
+current_ambient_light = 1.0
+
 
 class Renderer:
     """OpenGL 3D渲染器"""
 
     def __init__(self):
         self._init_opengl()
+        self._init_clouds()
+        self.ambient_light = 1.0
+        self.sky_color = (0.53, 0.81, 0.92)
+        self.fog_color = FOG_COLOR
 
     def _init_opengl(self):
         """初始化OpenGL设置"""
@@ -30,7 +47,7 @@ class Renderer:
         glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
-        # 背景色 (天空)
+        # 背景色 (天空) - 更接近Minecraft的蓝天
         glClearColor(0.53, 0.81, 0.92, 1.0)
 
         # 设置透视投影
@@ -42,8 +59,80 @@ class Renderer:
         # 禁用光照（使用顶点颜色）
         glDisable(GL_LIGHTING)
 
-        # 禁用雾效果
-        glDisable(GL_FOG)
+        # 启用雾效果 - 创建大气透视感
+        self._setup_fog()
+
+    def _setup_fog(self):
+        """设置雾效果"""
+        glEnable(GL_FOG)
+        glFogi(GL_FOG_MODE, GL_LINEAR)
+        glFogfv(GL_FOG_COLOR, FOG_COLOR)
+        glFogf(GL_FOG_START, FOG_START)
+        glFogf(GL_FOG_END, FOG_END)
+        glHint(GL_FOG_HINT, GL_NICEST)
+
+    def _init_clouds(self):
+        """初始化云层数据"""
+        self.clouds = []
+        cloud_rng = random.Random(12345)  # 固定种子保持一致性
+
+        # 生成云朵位置 - 大范围分布
+        for _ in range(50):
+            cx = cloud_rng.uniform(-200, 200)
+            cz = cloud_rng.uniform(-200, 200)
+            # 云的形状 - 由多个方块组成
+            cloud_blocks = []
+            cloud_width = cloud_rng.randint(4, 12)
+            cloud_length = cloud_rng.randint(4, 12)
+
+            for dx in range(cloud_width):
+                for dz in range(cloud_length):
+                    # 使用噪声让云有不规则形状
+                    if cloud_rng.random() < 0.7:
+                        cloud_blocks.append((dx, dz))
+
+            self.clouds.append({
+                'x': cx,
+                'z': cz,
+                'blocks': cloud_blocks
+            })
+
+    def _render_clouds(self, player):
+        """渲染云层"""
+        glDisable(GL_FOG)  # 云不受雾影响
+        glEnable(GL_BLEND)
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+
+        # 云的颜色 - 半透明白色
+        glColor4f(1.0, 1.0, 1.0, 0.85)
+
+        glBegin(GL_QUADS)
+        for cloud in self.clouds:
+            # 云跟随玩家移动（视觉上保持在天空）
+            base_x = cloud['x'] + int(player.x / 100) * 100
+            base_z = cloud['z'] + int(player.z / 100) * 100
+
+            for dx, dz in cloud['blocks']:
+                x = base_x + dx
+                z = base_z + dz
+                y = CLOUD_HEIGHT
+
+                # 渲染云块的顶面（主要可见面）
+                glVertex3f(x, y, z)
+                glVertex3f(x + 1, y, z)
+                glVertex3f(x + 1, y, z + 1)
+                glVertex3f(x, y, z + 1)
+
+                # 底面
+                glColor4f(0.9, 0.9, 0.9, 0.7)
+                glVertex3f(x, y - 1, z + 1)
+                glVertex3f(x + 1, y - 1, z + 1)
+                glVertex3f(x + 1, y - 1, z)
+                glVertex3f(x, y - 1, z)
+                glColor4f(1.0, 1.0, 1.0, 0.85)
+
+        glEnd()
+        glEnable(GL_FOG)
 
     def set_camera(self, player):
         """设置摄像机"""
@@ -64,22 +153,38 @@ class Renderer:
             0, 1, 0
         )
 
-    def render_world(self, world, player):
+    def update_day_night(self, day_night):
+        """更新昼夜循环效果"""
+        self.sky_color = day_night.get_sky_color()
+        self.fog_color = day_night.get_fog_color()
+        self.ambient_light = day_night.get_ambient_light()
+
+        # 更新天空颜色
+        glClearColor(self.sky_color[0], self.sky_color[1], self.sky_color[2], 1.0)
+
+        # 更新雾颜色
+        glFogfv(GL_FOG_COLOR, self.fog_color)
+
+    def render_world(self, world, player, zombies=None, bullets=None):
         """渲染世界"""
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
         # 确保正确的渲染状态
         glDisable(GL_LIGHTING)
-        glDisable(GL_FOG)
+        glEnable(GL_FOG)  # 启用雾效果
         glEnable(GL_DEPTH_TEST)
 
         self.set_camera(player)
+
+        # 渲染云层（先渲染远处的对象）
+        self._render_clouds(player)
 
         # 获取玩家所在区块
         player_chunk_x = math.floor(player.x / CHUNK_SIZE)
         player_chunk_z = math.floor(player.z / CHUNK_SIZE)
 
         # 渲染周围区块
+        glEnable(GL_FOG)  # 确保雾效果启用
         for dx in range(-RENDER_DISTANCE, RENDER_DISTANCE + 1):
             for dz in range(-RENDER_DISTANCE, RENDER_DISTANCE + 1):
                 chunk_x = player_chunk_x + dx
@@ -89,8 +194,205 @@ class Renderer:
                     chunk = world.chunks[key]
                     self._render_chunk_cached(chunk, world)
 
+        # 渲染僵尸
+        if zombies:
+            self._render_zombies(zombies)
+
+        # 渲染子弹
+        if bullets:
+            self._render_bullets(bullets)
+
         # 渲染选中方块高亮
         self._render_block_highlight(player, world)
+
+    def _render_bullets(self, bullets):
+        """渲染所有子弹"""
+        glDisable(GL_FOG)
+        glDisable(GL_DEPTH_TEST)  # 子弹总是可见
+        glEnable(GL_BLEND)
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE)  # 加法混合，发光效果
+
+        for bullet in bullets:
+            self._render_bullet(bullet)
+
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+        glEnable(GL_DEPTH_TEST)
+        glEnable(GL_FOG)
+
+    def _render_bullet(self, bullet):
+        """渲染单个子弹"""
+        x, y, z = bullet.get_position()
+
+        # 子弹核心 - 黄色发光
+        glPointSize(8.0)
+        glBegin(GL_POINTS)
+        glColor4f(1.0, 0.9, 0.3, 1.0)
+        glVertex3f(x, y, z)
+        glEnd()
+
+        # 子弹轨迹
+        trail = bullet.get_trail()
+        if len(trail) > 1:
+            glLineWidth(3.0)
+            glBegin(GL_LINE_STRIP)
+            for i, (tx, ty, tz) in enumerate(trail):
+                alpha = (i + 1) / len(trail) * 0.8
+                glColor4f(1.0, 0.7, 0.2, alpha)
+                glVertex3f(tx, ty, tz)
+            # 连接到当前位置
+            glColor4f(1.0, 0.9, 0.3, 1.0)
+            glVertex3f(x, y, z)
+            glEnd()
+
+        glPointSize(1.0)
+        glLineWidth(1.0)
+
+    def _render_zombies(self, zombies):
+        """渲染所有僵尸"""
+        glDisable(GL_FOG)  # 僵尸不受雾影响（保持可见性）
+
+        for zombie in zombies:
+            self._render_zombie(zombie)
+
+        glEnable(GL_FOG)
+
+    def _render_zombie(self, zombie):
+        """渲染单个僵尸"""
+        x, y, z = zombie.get_position()
+        color = zombie.get_render_color()
+
+        # 应用环境光
+        r = color[0] * self.ambient_light
+        g = color[1] * self.ambient_light
+        b = color[2] * self.ambient_light
+
+        # 简单的盒子模型表示僵尸
+        glBegin(GL_QUADS)
+
+        # 身体 (0.6 x 1.2 x 0.3)
+        body_width = 0.3
+        body_height = 0.8
+        body_depth = 0.2
+        body_y = y + 0.6
+
+        # 身体颜色 - 深绿色衣服
+        body_r, body_g, body_b = 0.2 * self.ambient_light, 0.35 * self.ambient_light, 0.2 * self.ambient_light
+
+        # 上面
+        glColor3f(body_r, body_g, body_b)
+        glVertex3f(x - body_width, body_y + body_height, z - body_depth)
+        glVertex3f(x + body_width, body_y + body_height, z - body_depth)
+        glVertex3f(x + body_width, body_y + body_height, z + body_depth)
+        glVertex3f(x - body_width, body_y + body_height, z + body_depth)
+
+        # 下面
+        glColor3f(body_r * 0.6, body_g * 0.6, body_b * 0.6)
+        glVertex3f(x - body_width, body_y, z + body_depth)
+        glVertex3f(x + body_width, body_y, z + body_depth)
+        glVertex3f(x + body_width, body_y, z - body_depth)
+        glVertex3f(x - body_width, body_y, z - body_depth)
+
+        # 前后左右面
+        glColor3f(body_r * 0.8, body_g * 0.8, body_b * 0.8)
+        # 前
+        glVertex3f(x - body_width, body_y, z - body_depth)
+        glVertex3f(x + body_width, body_y, z - body_depth)
+        glVertex3f(x + body_width, body_y + body_height, z - body_depth)
+        glVertex3f(x - body_width, body_y + body_height, z - body_depth)
+        # 后
+        glVertex3f(x + body_width, body_y, z + body_depth)
+        glVertex3f(x - body_width, body_y, z + body_depth)
+        glVertex3f(x - body_width, body_y + body_height, z + body_depth)
+        glVertex3f(x + body_width, body_y + body_height, z + body_depth)
+        # 左
+        glColor3f(body_r * 0.7, body_g * 0.7, body_b * 0.7)
+        glVertex3f(x - body_width, body_y, z + body_depth)
+        glVertex3f(x - body_width, body_y, z - body_depth)
+        glVertex3f(x - body_width, body_y + body_height, z - body_depth)
+        glVertex3f(x - body_width, body_y + body_height, z + body_depth)
+        # 右
+        glVertex3f(x + body_width, body_y, z - body_depth)
+        glVertex3f(x + body_width, body_y, z + body_depth)
+        glVertex3f(x + body_width, body_y + body_height, z + body_depth)
+        glVertex3f(x + body_width, body_y + body_height, z - body_depth)
+
+        # 头部 (0.4 x 0.4 x 0.4)
+        head_size = 0.25
+        head_y = body_y + body_height
+
+        # 头部颜色 - 僵尸绿皮肤
+        glColor3f(r, g, b)
+
+        # 上面
+        glVertex3f(x - head_size, head_y + head_size * 2, z - head_size)
+        glVertex3f(x + head_size, head_y + head_size * 2, z - head_size)
+        glVertex3f(x + head_size, head_y + head_size * 2, z + head_size)
+        glVertex3f(x - head_size, head_y + head_size * 2, z + head_size)
+
+        # 下面
+        glColor3f(r * 0.6, g * 0.6, b * 0.6)
+        glVertex3f(x - head_size, head_y, z + head_size)
+        glVertex3f(x + head_size, head_y, z + head_size)
+        glVertex3f(x + head_size, head_y, z - head_size)
+        glVertex3f(x - head_size, head_y, z - head_size)
+
+        # 前面 - 脸
+        glColor3f(r * 0.85, g * 0.85, b * 0.85)
+        glVertex3f(x - head_size, head_y, z - head_size)
+        glVertex3f(x + head_size, head_y, z - head_size)
+        glVertex3f(x + head_size, head_y + head_size * 2, z - head_size)
+        glVertex3f(x - head_size, head_y + head_size * 2, z - head_size)
+
+        # 其他面
+        glColor3f(r * 0.75, g * 0.75, b * 0.75)
+        # 后
+        glVertex3f(x + head_size, head_y, z + head_size)
+        glVertex3f(x - head_size, head_y, z + head_size)
+        glVertex3f(x - head_size, head_y + head_size * 2, z + head_size)
+        glVertex3f(x + head_size, head_y + head_size * 2, z + head_size)
+        # 左
+        glVertex3f(x - head_size, head_y, z + head_size)
+        glVertex3f(x - head_size, head_y, z - head_size)
+        glVertex3f(x - head_size, head_y + head_size * 2, z - head_size)
+        glVertex3f(x - head_size, head_y + head_size * 2, z + head_size)
+        # 右
+        glVertex3f(x + head_size, head_y, z - head_size)
+        glVertex3f(x + head_size, head_y, z + head_size)
+        glVertex3f(x + head_size, head_y + head_size * 2, z + head_size)
+        glVertex3f(x + head_size, head_y + head_size * 2, z - head_size)
+
+        # 腿部 (两条腿)
+        leg_width = 0.12
+        leg_height = 0.6
+
+        # 腿的动画偏移
+        leg_swing = math.sin(zombie.animation_time * 5) * 0.2 if zombie.state == 'chase' else 0
+
+        # 蓝色裤子
+        glColor3f(0.15 * self.ambient_light, 0.15 * self.ambient_light, 0.3 * self.ambient_light)
+
+        for leg_offset in [-0.15, 0.15]:
+            leg_x = x + leg_offset
+            swing = leg_swing if leg_offset > 0 else -leg_swing
+
+            # 腿的六个面
+            # 上
+            glVertex3f(leg_x - leg_width, y + leg_height, z - leg_width + swing)
+            glVertex3f(leg_x + leg_width, y + leg_height, z - leg_width + swing)
+            glVertex3f(leg_x + leg_width, y + leg_height, z + leg_width + swing)
+            glVertex3f(leg_x - leg_width, y + leg_height, z + leg_width + swing)
+            # 下
+            glVertex3f(leg_x - leg_width, y, z + leg_width + swing)
+            glVertex3f(leg_x + leg_width, y, z + leg_width + swing)
+            glVertex3f(leg_x + leg_width, y, z - leg_width + swing)
+            glVertex3f(leg_x - leg_width, y, z - leg_width + swing)
+            # 前后左右
+            glVertex3f(leg_x - leg_width, y, z - leg_width + swing)
+            glVertex3f(leg_x + leg_width, y, z - leg_width + swing)
+            glVertex3f(leg_x + leg_width, y + leg_height, z - leg_width + swing)
+            glVertex3f(leg_x - leg_width, y + leg_height, z - leg_width + swing)
+
+        glEnd()
 
     def _render_chunk_cached(self, chunk, world):
         """使用缓存渲染区块"""

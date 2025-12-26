@@ -44,6 +44,25 @@ HOTBAR_SLOTS = 9
 INVENTORY_ROWS = 3
 INVENTORY_COLS = 9
 
+# 昼夜循环设置
+DAY_LENGTH = 600.0  # 一个完整昼夜周期（秒）- 10分钟
+DAWN_START = 0.0    # 黎明开始 (0.0 = 0%)
+DAY_START = 0.1     # 白天开始 (10%)
+DUSK_START = 0.5    # 黄昏开始 (50%)
+NIGHT_START = 0.6   # 夜晚开始 (60%)
+NIGHT_END = 0.9     # 夜晚结束 (90%)
+
+# 僵尸设置
+ZOMBIE_SPAWN_DISTANCE_MIN = 15  # 最小生成距离
+ZOMBIE_SPAWN_DISTANCE_MAX = 30  # 最大生成距离
+ZOMBIE_MAX_COUNT = 10           # 最大僵尸数量
+ZOMBIE_SPAWN_INTERVAL = 5.0     # 生成间隔（秒）
+ZOMBIE_SPEED = 2.0              # 移动速度
+ZOMBIE_DAMAGE = 10              # 攻击伤害
+ZOMBIE_HEALTH = 20              # 生命值
+ZOMBIE_ATTACK_RANGE = 1.5       # 攻击范围
+ZOMBIE_DETECTION_RANGE = 20     # 检测玩家范围
+
 
 # 方块类型
 class BlockType:
@@ -81,6 +100,11 @@ class BlockType:
     LANTERN = 30        # 灯笼
     BARREL = 31         # 木桶
     LOG = 32            # 去皮原木
+    # 自然装饰方块
+    TALL_GRASS = 33     # 高草
+    FLOWER_RED = 34     # 红花（罂粟）
+    FLOWER_YELLOW = 35  # 黄花（蒲公英）
+    FLOWER_BLUE = 36    # 蓝花（矢车菊）
 
 
 # 方块颜色 (R, G, B) - 每个面可以不同
@@ -198,6 +222,19 @@ BLOCK_COLORS = {
         'bottom': (0.55, 0.4, 0.22),
         'side': (0.5, 0.35, 0.18),
     },
+    # 自然装饰方块颜色
+    BlockType.TALL_GRASS: {
+        'all': (0.3, 0.65, 0.2),
+    },
+    BlockType.FLOWER_RED: {
+        'all': (0.9, 0.2, 0.2),
+    },
+    BlockType.FLOWER_YELLOW: {
+        'all': (1.0, 0.9, 0.2),
+    },
+    BlockType.FLOWER_BLUE: {
+        'all': (0.3, 0.4, 0.9),
+    },
 }
 
 # 方块属性
@@ -236,6 +273,11 @@ BLOCK_DATA = {
     BlockType.LANTERN: {'name': '灯笼', 'solid': True, 'transparent': True, 'hardness': 3.5},
     BlockType.BARREL: {'name': '木桶', 'solid': True, 'transparent': False, 'hardness': 2.5},
     BlockType.LOG: {'name': '去皮原木', 'solid': True, 'transparent': False, 'hardness': 2.0},
+    # 自然装饰方块属性
+    BlockType.TALL_GRASS: {'name': '高草', 'solid': False, 'transparent': True, 'hardness': 0},
+    BlockType.FLOWER_RED: {'name': '罂粟', 'solid': False, 'transparent': True, 'hardness': 0},
+    BlockType.FLOWER_YELLOW: {'name': '蒲公英', 'solid': False, 'transparent': True, 'hardness': 0},
+    BlockType.FLOWER_BLUE: {'name': '矢车菊', 'solid': False, 'transparent': True, 'hardness': 0},
 }
 
 # 方块掉落
@@ -271,4 +313,9 @@ BLOCK_DROPS = {
     BlockType.LANTERN: BlockType.LANTERN,
     BlockType.BARREL: BlockType.BARREL,
     BlockType.LOG: BlockType.LOG,
+    # 自然装饰方块掉落
+    BlockType.TALL_GRASS: BlockType.AIR,
+    BlockType.FLOWER_RED: BlockType.FLOWER_RED,
+    BlockType.FLOWER_YELLOW: BlockType.FLOWER_YELLOW,
+    BlockType.FLOWER_BLUE: BlockType.FLOWER_BLUE,
 }

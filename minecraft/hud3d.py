@@ -19,11 +19,19 @@ class HUD:
         self.small_font = pygame.font.Font(None, 20)
         self.large_font = pygame.font.Font(None, 48)
 
-    def render(self, screen, player, fps=0, debug=False, world=None):
+    def render(self, screen, player, fps=0, debug=False, world=None, day_night=None, zombie_count=0):
         """渲染HUD"""
         self._render_hotbar(screen, player)
-        self._render_crosshair(screen)
+        self._render_crosshair(screen, player)
         self._render_health(screen, player)
+
+        # 渲染枪口闪光
+        if player.gun.has_muzzle_flash():
+            self._render_muzzle_flash(screen)
+
+        # 渲染昼夜信息
+        if day_night:
+            self._render_day_night_info(screen, day_night, zombie_count)
 
         # One Block 模式显示挖掘次数
         if world and world.one_block_mode:
@@ -32,7 +40,7 @@ class HUD:
         if debug:
             self._render_debug(screen, player, fps)
 
-    def _render_crosshair(self, screen):
+    def _render_crosshair(self, screen, player=None):
         """渲染准星"""
         cx = WINDOW_WIDTH // 2
         cy = WINDOW_HEIGHT // 2
@@ -40,7 +48,11 @@ class HUD:
         thickness = 2
         gap = 4
 
-        color = (255, 255, 255)
+        # 射击时准星变红
+        if player and player.gun.has_muzzle_flash():
+            color = (255, 100, 100)
+        else:
+            color = (255, 255, 255)
         shadow = (50, 50, 50)
 
         # 阴影
@@ -55,38 +67,59 @@ class HUD:
         pygame.draw.line(screen, color, (cx, cy - size), (cx, cy - gap), thickness)
         pygame.draw.line(screen, color, (cx, cy + gap), (cx, cy + size), thickness)
 
+    def _render_muzzle_flash(self, screen):
+        """渲染枪口闪光效果"""
+        cx = WINDOW_WIDTH // 2
+        cy = WINDOW_HEIGHT // 2
+
+        # 中心亮点
+        flash_size = 30
+        flash_surface = pygame.Surface((flash_size * 2, flash_size * 2), pygame.SRCALPHA)
+
+        # 黄色闪光
+        for r in range(flash_size, 0, -5):
+            alpha = int(255 * (1 - r / flash_size))
+            pygame.draw.circle(flash_surface, (255, 200, 50, alpha), (flash_size, flash_size), r)
+
+        screen.blit(flash_surface, (cx - flash_size, cy - flash_size))
+
     def _render_hotbar(self, screen, player):
-        """渲染快捷栏"""
-        hotbar_width = HOTBAR_SLOTS * (self.SLOT_SIZE + self.SLOT_PADDING) + self.SLOT_PADDING
-        start_x = (WINDOW_WIDTH - hotbar_width) // 2
-        y = WINDOW_HEIGHT - self.SLOT_SIZE - 20
+        """渲染快捷栏 - 显示枪"""
+        # 简化的枪显示区域
+        gun_width = 200
+        x = (WINDOW_WIDTH - gun_width) // 2
+        y = WINDOW_HEIGHT - 70
 
         # 背景
-        bg_rect = (start_x - 5, y - 5, hotbar_width + 10, self.SLOT_SIZE + 10)
+        bg_rect = (x, y, gun_width, 60)
         s = pygame.Surface((bg_rect[2], bg_rect[3]), pygame.SRCALPHA)
         s.fill((30, 30, 30, 180))
         screen.blit(s, (bg_rect[0], bg_rect[1]))
         pygame.draw.rect(screen, (60, 60, 60), bg_rect, 2)
 
-        for i in range(HOTBAR_SLOTS):
-            slot_x = start_x + self.SLOT_PADDING + i * (self.SLOT_SIZE + self.SLOT_PADDING)
+        # 枪图标 - 简单的像素枪
+        self._render_gun_icon(screen, x + 15, y + 10)
 
-            # 槽位背景
-            if i == player.selected_slot:
-                pygame.draw.rect(screen, (100, 100, 100), (slot_x, y, self.SLOT_SIZE, self.SLOT_SIZE))
-                pygame.draw.rect(screen, (255, 255, 255), (slot_x, y, self.SLOT_SIZE, self.SLOT_SIZE), 3)
-            else:
-                pygame.draw.rect(screen, (50, 50, 50), (slot_x, y, self.SLOT_SIZE, self.SLOT_SIZE))
-                pygame.draw.rect(screen, (80, 80, 80), (slot_x, y, self.SLOT_SIZE, self.SLOT_SIZE), 1)
+        # 枪名称
+        gun_name = self.font.render(player.gun.name, True, (255, 220, 100))
+        screen.blit(gun_name, (x + 70, y + 8))
 
-            # 物品
-            item = player.inventory[i]
-            if item is not None:
-                self._render_item(screen, slot_x, y, item)
+        # 无限弹药标志
+        ammo_text = self.small_font.render("Ammo: INF", True, (100, 255, 100))
+        screen.blit(ammo_text, (x + 70, y + 35))
 
-            # 快捷键数字
-            num = self.small_font.render(str(i + 1), True, (180, 180, 180))
-            screen.blit(num, (slot_x + 3, y + 3))
+    def _render_gun_icon(self, screen, x, y):
+        """渲染枪图标"""
+        # 枪身 - 灰色
+        pygame.draw.rect(screen, (80, 80, 80), (x, y + 15, 40, 12))
+        # 枪管 - 深灰色
+        pygame.draw.rect(screen, (60, 60, 60), (x + 35, y + 17, 15, 8))
+        # 握把 - 棕色
+        pygame.draw.rect(screen, (100, 60, 30), (x + 5, y + 25, 12, 18))
+        # 扳机护圈
+        pygame.draw.rect(screen, (70, 70, 70), (x + 18, y + 25, 8, 8))
+        # 高光
+        pygame.draw.line(screen, (120, 120, 120), (x + 2, y + 17), (x + 32, y + 17), 2)
 
     def _render_item(self, screen, x, y, item):
         """渲染背包物品"""
@@ -176,6 +209,34 @@ class HUD:
             (x + size, y + size * 0.3),
             (x + size * 0.5, y + size),
         ]
+
+    def _render_day_night_info(self, screen, day_night, zombie_count):
+        """渲染昼夜循环信息"""
+        info = day_night.get_display_info()
+
+        # 左上角显示时间
+        x, y = 10, 10
+
+        # 时间
+        time_color = (255, 255, 150) if not info['is_night'] else (150, 150, 255)
+        time_text = self.font.render(f"Day {info['day']} - {info['time']}", True, time_color)
+        screen.blit(time_text, (x, y))
+
+        # 时段
+        period_colors = {
+            '黎明': (255, 180, 100),
+            '白天': (255, 255, 200),
+            '黄昏': (255, 150, 80),
+            '夜晚': (100, 100, 200)
+        }
+        period_color = period_colors.get(info['period'], (200, 200, 200))
+        period_text = self.small_font.render(info['period'], True, period_color)
+        screen.blit(period_text, (x, y + 28))
+
+        # 僵尸数量（夜晚时显示）
+        if info['is_night'] or zombie_count > 0:
+            zombie_text = self.small_font.render(f"Zombies: {zombie_count}", True, (255, 100, 100))
+            screen.blit(zombie_text, (x, y + 48))
 
     def _render_one_block_info(self, screen, world):
         """渲染 One Block 模式信息"""

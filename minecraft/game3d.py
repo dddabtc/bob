@@ -8,7 +8,7 @@ Minecraft 3D - 一个用Python、Pygame和OpenGL制作的3D Minecraft风格游�
     Shift: 冲刺
     Ctrl: 潜行
     鼠标移动: 视角
-    左键: 挖掘方块
+    左键: 挖掘方块/攻击僵尸
     右键: 放置方块
     滚轮/1-9: 选择物品
     E: 打开背包
@@ -16,6 +16,8 @@ Minecraft 3D - 一个用Python、Pygame和OpenGL制作的3D Minecraft风格游�
     F3: 调试信息
     F5: 保存游戏
     F6: 加载游戏
+    T: 跳到白天 (调试)
+    N: 跳到夜晚 (调试)
 """
 
 import sys
@@ -39,6 +41,9 @@ from player3d import Player
 from renderer3d import Renderer
 from hud3d import HUD, PauseMenu, InventoryScreen
 from save_system import save_game, load_game, has_save
+from daynight import DayNightCycle
+from zombie import ZombieManager
+from village3d import generate_fortress
 
 
 class Game:
@@ -93,7 +98,15 @@ class Game:
         self.pause_menu = PauseMenu()
         self.inventory_screen = InventoryScreen()
 
+        # 创建昼夜循环系统 (从早晨开始)
+        self.day_night = DayNightCycle(start_time=0.2)
+
+        # 创建僵尸管理器
+        self.zombie_manager = ZombieManager()
+
         print("游戏启动完成!")
+        print("提示: 你有一把无限弹药的枪！左键射击")
+        print("提示: 夜晚会有僵尸出没！按T跳到白天，按N跳到夜晚")
 
     def _show_loading(self):
         """显示加载画面"""
@@ -194,29 +207,55 @@ class Game:
         elif K_1 <= event.key <= K_9:
             self.player.select_slot(event.key - K_1)
 
+        # 调试：跳到白天
+        elif event.key == K_t:
+            self.day_night.skip_to_day()
+            self.zombie_manager.clear_all()
+            print("跳到白天")
+
+        # 调试：跳到夜晚
+        elif event.key == K_n:
+            self.day_night.skip_to_night()
+            print("跳到夜晚 - 小心僵尸！")
+
     def _handle_mousedown(self, event):
         """处理鼠标按下"""
         target, place_pos = self.player.raycast(self.world)
 
-        if event.button == 1:  # 左键 - 挖掘
-            self.player.start_mining(target, self.world)
+        if event.button == 1:  # 左键 - 射击
+            # 使用枪射击
+            self.player.attack(self.zombie_manager)
 
-        elif event.button == 3:  # 右键 - 放置
+        elif event.button == 3:  # 右键 - 放置方块（如果有的话）
             self.player.place_block(place_pos, self.world)
 
     def _update(self, dt):
         """更新游戏状态"""
         keys = pygame.key.get_pressed()
 
+        # 更新昼夜循环
+        self.day_night.update(dt)
+        self.renderer.update_day_night(self.day_night)
+
         # 更新玩家
         self.player.update(self.world, keys, dt)
 
-        # 持续挖掘
+        # 更新僵尸
+        self.zombie_manager.update(self.world, self.player, self.day_night, dt)
+
+        # 更新枪和子弹
+        self.player.update_gun(self.world, self.zombie_manager, dt)
+
+        # 检查玩家是否死亡
+        if self.player.is_dead():
+            print("你被僵尸杀死了！正在重生...")
+            self.player.respawn(self.world)
+            self.zombie_manager.clear_all()
+
+        # 持续射击（按住左键）
         mouse_buttons = pygame.mouse.get_pressed()
-        if mouse_buttons[0] and self.player.is_mining:
-            drop = self.player.update_mining(self.world, dt)
-            if drop is not None:
-                self.player.add_item(drop)
+        if mouse_buttons[0]:
+            self.player.attack(self.zombie_manager)
 
         # 加载新区块
         player_chunk_x = math.floor(self.player.x / CHUNK_SIZE)
@@ -236,8 +275,9 @@ class Game:
         glDisable(GL_LIGHTING)
         glDisable(GL_FOG)
 
-        # 3D渲染
-        self.renderer.render_world(self.world, self.player)
+        # 3D渲染（包含僵尸和子弹）
+        bullets = self.player.gun.get_bullets()
+        self.renderer.render_world(self.world, self.player, self.zombie_manager.get_zombies(), bullets)
 
         # 切换到2D模式渲染HUD
         self._setup_2d()
@@ -247,7 +287,9 @@ class Game:
 
         # 渲染HUD
         fps = self.clock.get_fps()
-        self.hud.render(self.hud_surface, self.player, fps, self.debug_mode, self.world)
+        zombie_count = len(self.zombie_manager.get_zombies())
+        self.hud.render(self.hud_surface, self.player, fps, self.debug_mode, self.world,
+                       self.day_night, zombie_count)
 
         # 挖掘进度
         if self.player.is_mining:
@@ -335,7 +377,7 @@ class Game:
 def main():
     """游戏入口"""
     print("=" * 50)
-    print("  Minecraft 3D")
+    print("  Minecraft 3D - 射击版")
     print("=" * 50)
     print()
     print("控制方式:")
@@ -343,14 +385,14 @@ def main():
     print("  空格: 跳跃")
     print("  Shift: 冲刺")
     print("  鼠标: 视角")
-    print("  左键: 挖掘")
-    print("  右键: 放置")
-    print("  滚轮/1-9: 选择物品")
+    print("  左键: 射击（无限弹药）")
     print("  E: 背包")
     print("  ESC: 暂停")
     print("  F3: 调试信息")
     print("  F5: 保存游戏")
     print("  F6: 加载游戏")
+    print("  T: 跳到白天")
+    print("  N: 跳到夜晚（僵尸出没）")
     print()
 
     game = Game()
