@@ -86,9 +86,16 @@ class Game:
         print("正在加载区块...")
         self.world.get_chunks_around(spawn_chunk_x, spawn_chunk_z, RENDER_DISTANCE)
 
-        # 创建玩家
-        self.player = Player(spawn[0], spawn[1], spawn[2])
-        print(f"出生点: ({spawn[0]:.1f}, {spawn[1]:.1f}, {spawn[2]:.1f})")
+        # 在出生点生成堡垒
+        print("正在生成出生堡垒...")
+        fortress_y = int(spawn[1]) - 2  # 堡垒地面在出生点下方一点
+        generate_fortress(self.world, int(spawn[0]), fortress_y, int(spawn[2]))
+
+        # 创建玩家 - 在堡垒内部出生
+        player_spawn_y = fortress_y + 2  # 在堡垒地板上方
+        self.player = Player(spawn[0], player_spawn_y, spawn[2])
+        print(f"出生点: ({spawn[0]:.1f}, {player_spawn_y:.1f}, {spawn[2]:.1f})")
+        print("你出生在一座堡垒中！")
 
         # 创建渲染器
         self.renderer = Renderer()
